@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "APP"
+version = "0.1.0"
+description = "A backend for frontend that servers data from the blockchain"
+authors = [
+    "Velodrome Team",
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+wsgi-request-logger = "0.4.6"
+versiontools = "1.9.1"
+falcon = "3.1"
+falcon-compression = "0.2.1"
+bjoern = "3.2.1"
+web3 = "5.27.0"
+multicall = { git = "https://github.com/velodrome-finance/multicall.py", tag = "v0.5.1" }
+redis = "4.2.2"
+fakeredis = "1.7.4"
+walrus = "0.9.1"
+honeybadger = "0.8.0"
+python-environ = "0.4.54"
+black = "^22.8.0"
+
+[tool.poetry.scripts]
+api-start = 'app:main'
+
+[build-system]
+requires = ["poetry>=1.2.1"]
+build-backend = "poetry.masonry.api"
