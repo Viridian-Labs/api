@@ -20,6 +20,8 @@ This will start three services:
 This project is set up with [`poetry`](https://python-poetry.org/docs/) and Python 3.9.14. We recommend installing
 [`pyenv`](https://github.com/pyenv/pyenv) to easily manage different Python versions.
 
+**Note**: Make sure you update your `.env` file to point to localhost (i.e: redis url)
+
 Installing dependencies:
 
     poetry install
