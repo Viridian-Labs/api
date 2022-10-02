@@ -21,3 +21,7 @@ RUN poetry install
 EXPOSE 3000
 
 ENTRYPOINT ["api-start"]
+
+FROM prod AS sync
+
+ENTRYPOINT ["api-sync"]

@@ -22,6 +22,8 @@ black = "^22.8.0"
 
 [tool.poetry.scripts]
 api-start = 'app.app:main'
+api-sync = 'app.pairs.syncer:sync_forever'
+api-sync-once = 'app.pairs.syncer:sync'
 
 [build-system]
 requires = ["poetry>=1.2.1"]
