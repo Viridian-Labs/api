@@ -53,7 +53,7 @@ def honeybadger_handler(req, resp, exc, params):
 
 
 # Webserver setup
-PORT = env.int("PORT", default=3000)
+PORT = env.int("PORT", default=8000)
 
 # Logger setup...
 LOGGER = logging.getLogger(__name__)
