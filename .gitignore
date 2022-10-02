@@ -6,6 +6,7 @@ __pycache__/
 build
 dist
 env
+.env
 
 # Virtual environment
 .venv
