@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import time
+import configparser
 
-from .app import main
+parser = configparser.ConfigParser()
+parser.read("pyproject.toml")
 
-__version__ = (1, 0, 0, 'alpha', int(time.time() / 100))
+__version__ = (parser["tool.poetry"]['version'].strip("\"'"),)
