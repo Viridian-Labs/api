@@ -30,6 +30,10 @@ Installing dependencies:
 
     poetry install
 
+Running the project (after the previous command)
+
+    api-start
+
 This will spawn and use a virtual environment in `.venv` and install the dependencies defined in `poetry.lock`
 (or `pyproject.toml`) if the lock file was missing (which should not happen).
 
