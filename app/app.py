@@ -12,7 +12,7 @@ from falcon_compression.middleware import CompressionMiddleware
 from app.assets import Assets
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.settings import LOGGER, honeybadger_handler
+from app.settings import LOGGER, honeybadger_handler, PORT
 from app.venfts import Accounts
 
 app = falcon.App(cors_enable=True, middleware=[CompressionMiddleware()])
@@ -32,9 +32,9 @@ app.add_route('/api/v1/updatePairs', Pairs())
 # Wrap the app in a WSGI logger to make it more verbose...
 wsgi = WSGILogger(app, [StreamHandler(sys.stdout)], ApacheFormatter())
 
+
 def main():
-    port = int(os.getenv('PORT') or 3000)
-    LOGGER.info('Starting on port %s ...', port)
+    LOGGER.info('Starting on port %s ...', PORT)
 
     import bjoern
-    bjoern.run(wsgi, '', port, reuse_port=True)
+    bjoern.run(wsgi, '', PORT, reuse_port=True)

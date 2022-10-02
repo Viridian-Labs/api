@@ -2,9 +2,7 @@
 name = "APP"
 version = "0.1.0"
 description = "A backend for frontend that servers data from the blockchain"
-authors = [
-    "Velodrome Team",
-]
+authors = ["Velodrome Team",]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -23,7 +21,7 @@ python-environ = "0.4.54"
 black = "^22.8.0"
 
 [tool.poetry.scripts]
-api-start = 'app:main'
+api-start = 'app.app:main'
 
 [build-system]
 requires = ["poetry>=1.2.1"]
