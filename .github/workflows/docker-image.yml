@@ -1,0 +1,31 @@
+name: Docker Image CI
+
+on:
+  push:
+    tags: ["*"]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and push API
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: equilibrefinance/api:latest,equilibrefinance/api:$(github.ref_name)
+          target: prod
+      
+      - name: Build and push sync
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: equilibrefinance/sync:latest,equilibrefinance/sync:$(github.ref_name)
+          target: sync
