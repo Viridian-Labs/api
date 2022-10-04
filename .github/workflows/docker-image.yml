@@ -20,12 +20,20 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: equilibrefinance/api:latest,equilibrefinance/api:$(github.ref_name)
+          tags: equilibrefinance/api:latest,equilibrefinance/api:${{ github.ref_name }}
           target: prod
       
       - name: Build and push sync
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: equilibrefinance/sync:latest,equilibrefinance/sync:$(github.ref_name)
+          tags: equilibrefinance/sync:latest,equilibrefinance/sync:${{ github.ref_name }}
           target: sync
+
+  tests:
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Run tests
+          run: |
+           docker run --rm --env-file=env.example --entrypoint sh equilibrefinance/api -c 'pip install coverage flake8 && flake8 && coverage run --source=app setup.py test && coverage report'
