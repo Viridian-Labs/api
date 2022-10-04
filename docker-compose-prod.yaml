@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:alpine3.16
+    networks:
+      - backend
+
+  api:
+    image: equilibre/api:${API-TAG:-latest}
+    ports:
+      - "8000:8000"
+    networks:
+      - backend
+    env_file:
+      - .env
+
+  sync:
+    image: equilibre/sync:${API-TAG:-latest}
+    networks:
+      - backend
+    env_file:
+      - .env
+
+networks:
+  backend:
