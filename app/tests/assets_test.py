@@ -2,8 +2,7 @@
 
 from app.assets import Token
 from app.settings import IGNORED_TOKEN_ADDRESSES
-
-from .helpers import AppTestCase
+from app.tests.helpers import AppTestCase
 
 
 class AssetsTestCase(AppTestCase):

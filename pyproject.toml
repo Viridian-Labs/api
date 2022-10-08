@@ -24,6 +24,7 @@ black = "^22.8.0"
 api-start = 'app.app:main'
 api-sync = 'app.pairs.syncer:sync_forever'
 api-sync-once = 'app.pairs.syncer:sync'
+api-test = 'app.tests:run'
 
 [build-system]
 requires = ["poetry>=1.2.1"]
