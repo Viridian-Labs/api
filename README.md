@@ -1,5 +1,7 @@
 # Equilibre Finance HTTP API 🚲💨🕸️
 
+[![Latest tag](https://github.com/equilibre-finance/api/actions/workflows/tag-ci.yml/badge.svg)](https://github.com/equilibre-finance/api/actions/workflows/tag-ci.yml)
+
 Equilibre Finance HTTP API is used by our app to fetch tokens and liquidity
 pool pairs.
 
