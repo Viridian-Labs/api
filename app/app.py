@@ -11,7 +11,9 @@ from falcon_compression.middleware import CompressionMiddleware
 from app.assets import Assets
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.settings import LOGGER, honeybadger_handler, PORT, CORS_ALLOWED_DOMAINS
+from app.settings import (
+    LOGGER, honeybadger_handler, PORT, CORS_ALLOWED_DOMAINS
+)
 from app.venfts import Accounts
 
 app = falcon.App(cors_enable=True, middleware=[
