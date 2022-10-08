@@ -37,9 +37,10 @@ jobs:
           target: sync
 
   tests:
-      runs-on: ubuntu-latest
+    needs: build
+    runs-on: ubuntu-latest
 
-      steps:
-        - name: Run tests
-          run: |
-           docker run --rm --env-file=env.example --entrypoint sh equilibrefinance/api:${{ github.ref_name }} -c 'pip install coverage flake8 && flake8 && coverage run --source=app setup.py test && coverage report'
+    steps:
+      - name: Run tests
+        run: |
+         docker run --rm --env-file=env.example --entrypoint sh equilibrefinance/api:${{ github.ref_name }} -c 'pip install coverage flake8 && flake8 && coverage run --source=app setup.py test && coverage report'
