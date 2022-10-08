@@ -27,4 +27,3 @@ class AccountsTestCase(AppTestCase):
         flat_rewards = []
         for venft in result.json['data']:
             flat_rewards += venft['rewards']
-
