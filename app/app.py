@@ -16,12 +16,24 @@ from app.settings import (
 )
 from app.venfts import Accounts
 
-app = falcon.App(cors_enable=True, middleware=[
-    falcon.CORSMiddleware(
-        allow_origins=CORS_ALLOWED_DOMAINS,
-    ),
+middleware = [
     CompressionMiddleware(),
-])
+]
+
+if CORS_ALLOWED_DOMAINS:
+    middleware.append(
+        falcon.CORSMiddleware(
+            allow_origins=CORS_ALLOWED_DOMAINS,
+        ),
+    )
+
+app_config = dict(
+    middleware=middleware,
+    cors_enable=bool(CORS_ALLOWED_DOMAINS),
+)
+
+app = falcon.App(**app_config)
+
 app.add_error_handler(Exception, honeybadger_handler)
 app.req_options.auto_parse_form_urlencoded = True
 app.req_options.strip_url_path_trailing_slash = True

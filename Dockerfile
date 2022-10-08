@@ -18,7 +18,7 @@ COPY ./ /app
 
 RUN poetry install
 
-EXPOSE 3000
+EXPOSE 8000
 
 ENTRYPOINT ["api-start"]
 
