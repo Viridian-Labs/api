@@ -23,12 +23,10 @@ jobs:
       - name: Build and push API
         uses: docker/build-push-action@v3
         with:
-          push: false
+          push: true
           tags: equilibrefinance/api:${{ github.sha }}
           target: prod
 
       - name: Run tests
         run: |
          docker run --rm --env-file=env.example --entrypoint sh equilibrefinance/api:${{ github.sha }} -c 'pip install coverage flake8 && flake8 && coverage run $(which api-test) && coverage report'
-
-      
