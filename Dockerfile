@@ -14,9 +14,13 @@ ENV PATH="$PATH:$POETRY_HOME/bin"
 FROM base AS prod
 
 WORKDIR /app
-COPY ./ /app
+COPY ./pyproject.toml /app
+COPY ./poetry.toml /app
+COPY ./poetry.lock /app
 
 RUN poetry install
+
+COPY ./ /app
 
 EXPOSE 8000
 
