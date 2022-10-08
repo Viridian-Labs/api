@@ -24,11 +24,11 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: false
-          tags: equilibrefinance/api:${{ github.head_ref }}-${{ github.run_attempt }}
+          tags: equilibrefinance/api:${{ github.sha }}
           target: prod
 
       - name: Run tests
         run: |
-         docker run --rm --env-file=env.example --entrypoint sh equilibrefinance/api:${{ github.head_ref }}-${{ github.run_attempt }} -c 'pip install coverage flake8 && flake8 && coverage run --source=app setup.py test && coverage report'
+         docker run --rm --env-file=env.example --entrypoint sh equilibrefinance/api:${{ github.sha }} -c 'pip install coverage flake8 && flake8 && coverage run --source=app setup.py test && coverage report'
 
       
