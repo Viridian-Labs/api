@@ -40,3 +40,5 @@ class Configuration(object):
                 )
             )
         )
+
+        print("ta")

@@ -45,4 +45,4 @@ jobs:
 
       - name: Run tests
         run: |
-         docker run --rm --env-file=env.example -w /app --entrypoint sh equilibrefinance/api:${{ github.ref_name }} -c 'pip install coverage flake8 && flake8 && coverage run --source=app setup.py test && coverage report'
+         docker run --rm --env-file=env.example -w /app --entrypoint sh equilibrefinance/api:${{ github.ref_name }} -c 'pip install coverage flake8 && flake8 && coverage run $(which api-test) && coverage report'

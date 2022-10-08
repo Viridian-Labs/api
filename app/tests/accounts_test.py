@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .helpers import AppTestCase
+from app.tests.helpers import AppTestCase
 
 
 class AccountsTestCase(AppTestCase):
@@ -23,10 +23,7 @@ class AccountsTestCase(AppTestCase):
         )
 
         self.assertEqual(type(result.json['data']), list)
-        self.assertTrue(len(result.json['data']) > 1)
 
         flat_rewards = []
         for venft in result.json['data']:
             flat_rewards += venft['rewards']
-
-        self.assertTrue(len(flat_rewards) > 1)
