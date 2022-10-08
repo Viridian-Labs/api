@@ -81,6 +81,8 @@ WRAPPED_BRIBE_FACTORY_ADDRESS = env('WRAPPED_BRIBE_FACTORY_ADDRESS')
 # Seconds to wait before running the chain syncup. `0` disables it!
 SYNC_WAIT_SECONDS = env.int('SYNC_WAIT_SECONDS', default=0)
 
+CORS_ALLOWED_DOMAINS = env("CORS_ALLOWED_DOMAINS", default="*")
+
 # Placeholder for our cache instance (Redis)
 CACHE = None
 

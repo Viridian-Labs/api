@@ -11,10 +11,15 @@ from falcon_compression.middleware import CompressionMiddleware
 from app.assets import Assets
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.settings import LOGGER, honeybadger_handler, PORT
+from app.settings import LOGGER, honeybadger_handler, PORT, CORS_ALLOWED_DOMAINS
 from app.venfts import Accounts
 
-app = falcon.App(cors_enable=True, middleware=[CompressionMiddleware()])
+app = falcon.App(cors_enable=True, middleware=[
+    falcon.CORSMiddleware(
+        allow_origins=CORS_ALLOWED_DOMAINS,
+    ),
+    CompressionMiddleware(),
+])
 app.add_error_handler(Exception, honeybadger_handler)
 app.req_options.auto_parse_form_urlencoded = True
 app.req_options.strip_url_path_trailing_slash = True
