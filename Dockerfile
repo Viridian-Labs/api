@@ -15,12 +15,13 @@ FROM base AS prod
 
 WORKDIR /app
 COPY ./pyproject.toml /app
-COPY ./poetry.toml /app
 COPY ./poetry.lock /app
 
 RUN poetry install
 
 COPY ./ /app
+
+RUN poetry install --only-root
 
 EXPOSE 8000
 
