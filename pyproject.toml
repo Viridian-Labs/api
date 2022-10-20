@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "APP"
-version = "v0.1.10"
+version = "v0.1.11"
 description = "A backend for frontend that servers data from the blockchain"
 authors = ["Velodrome Team",]
 
