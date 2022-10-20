@@ -488,22 +488,15 @@ varint = "*"
 
 [[package]]
 name = "multicall"
-version = "0.6.0"
+version = "0.6.2"
 description = "aggregate results from multiple ethereum contract calls"
 category = "main"
 optional = false
-python-versions = "^3.8"
-develop = false
+python-versions = ">=3.8,<4.0"
 
 [package.dependencies]
-eth_retry = "^0.1.8"
-web3 = "^5.27"
-
-[package.source]
-type = "git"
-url = "https://github.com/equilibre-finance/multicall.py"
-reference = "v0.1.0"
-resolved_reference = "e7a14beb61570b5c5de57b20a327c50ea2e8b862"
+eth_retry = ">=0.1.8,<0.2.0"
+web3 = ">=5.27,<5.29.0 || >=5.32.0,<6.0"
 
 [[package]]
 name = "multidict"
@@ -864,7 +857,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "024add3915fa3f81f652abe9ad3b6b76fd9c6db5a1b94f8eccc71b43d3ce5287"
+content-hash = "d7e7358830562dd000eded3c3f8ee99ffbf51a3f4163e991e73ec99d563fcf18"
 
 [metadata.files]
 aiohttp = [
@@ -1463,7 +1456,10 @@ multiaddr = [
     {file = "multiaddr-0.0.9-py2.py3-none-any.whl", hash = "sha256:5c0f862cbcf19aada2a899f80ef896ddb2e85614e0c8f04dd287c06c69dac95b"},
     {file = "multiaddr-0.0.9.tar.gz", hash = "sha256:30b2695189edc3d5b90f1c303abb8f02d963a3a4edf2e7178b975eb417ab0ecf"},
 ]
-multicall = []
+multicall = [
+    {file = "multicall-0.6.2-py3-none-any.whl", hash = "sha256:bea5fc911b60a2c0b3ccc8d6d741da9b3d516f2f02b1dd5e0fb82154736836af"},
+    {file = "multicall-0.6.2.tar.gz", hash = "sha256:b231cbdf0a76ccc3dcc55ad9a5ee11428805f37d5bb811baa8e88c87bd08f2c9"},
+]
 multidict = [
     {file = "multidict-6.0.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:0b9e95a740109c6047602f4db4da9949e6c5945cefbad34a1299775ddc9a62e2"},
     {file = "multidict-6.0.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:ac0e27844758d7177989ce406acc6a83c16ed4524ebc363c1f748cba184d89d3"},
