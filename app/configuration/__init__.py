@@ -17,7 +17,17 @@ class Configuration(object):
     def on_get(self, req, resp):
         default_token = Token.find(DEFAULT_TOKEN_ADDRESS)
         stable_token = Token.find(STABLE_TOKEN_ADDRESS)
-        route_tokens = [Token.find(token) for token in ROUTE_TOKEN_ADDRESSES]
+
+        route_token_addresses = (
+            set(ROUTE_TOKEN_ADDRESSES) - {
+                DEFAULT_TOKEN_ADDRESS, STABLE_TOKEN_ADDRESS
+            }
+        )
+
+        route_tokens = [default_token, stable_token]
+        for token_address in route_token_addresses:
+            route_tokens.append(Token.find(token_address))
+
         route_token_data = [token._data for token in route_tokens]
 
         pairs = [p for p in Pair.all()]
@@ -32,11 +42,7 @@ class Configuration(object):
         resp.status = falcon.HTTP_200
         resp.text = json.dumps(
             dict(
-                data=[
-                    default_token._data,
-                    stable_token._data,
-                    *route_token_data
-                ],
+                data=route_token_data,
                 meta=dict(
                     tvl=tvl,
                     max_apr=max_apr,
@@ -47,5 +53,3 @@ class Configuration(object):
                 )
             )
         )
-
-        print("ta")
