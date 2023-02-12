@@ -8,13 +8,18 @@ from web3.auto import w3
 from web3.exceptions import ContractLogicError
 
 from app.settings import (
-    LOGGER, CACHE, TOKENLISTS, ROUTER_ADDRESS, STABLE_TOKEN_ADDRESS,
-    IGNORED_TOKEN_ADDRESSES
+    LOGGER,
+    CACHE,
+    TOKENLISTS,
+    ROUTER_ADDRESS,
+    STABLE_TOKEN_ADDRESS,
+    IGNORED_TOKEN_ADDRESSES,
 )
 
 
 class Token(Model):
     """ERC20 token model."""
+
     __database__ = CACHE
 
     address = TextField(primary_key=True)
@@ -26,11 +31,11 @@ class Token(Model):
     stable = BooleanField(default=0)
 
     # See: https://docs.1inch.io/docs/aggregation-protocol/api/swagger
-    AGGREGATOR_ENDPOINT = 'https://api.1inch.io/v4.0/10/quote'
+    AGGREGATOR_ENDPOINT = "https://api.1inch.io/v4.0/10/quote"
     # See: https://docs.dexscreener.com/#tokens
-    DEXSCREENER_ENDPOINT = 'https://api.dexscreener.com/latest/dex/tokens/'
+    DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/tokens/"
     # See: https://defillama.com/docs/api#operations-tag-coins
-    DEFILLAMA_ENDPOINT = 'https://coins.llama.fi/prices/current/'
+    DEFILLAMA_ENDPOINT = "https://coins.llama.fi/prices/current/"
 
     def defillama_price_in_stables(self):
         """Returns the price quoted from our llama defis."""
@@ -38,12 +43,12 @@ class Token(Model):
         if self.address == STABLE_TOKEN_ADDRESS:
             return 1.0
 
-        chain_token = 'kava:' + self.address.lower()
+        chain_token = "kava:" + self.address.lower()
         res = requests.get(self.DEFILLAMA_ENDPOINT + chain_token).json()
-        coins = res.get('coins', {})
+        coins = res.get("coins", {})
 
         for (_, coin) in coins.items():
-            return coin.get('price', 0)
+            return coin.get("price", 0)
 
         return 0
 
@@ -60,13 +65,13 @@ class Token(Model):
             params=dict(
                 fromTokenAddress=self.address,
                 toTokenAddress=stablecoin.address,
-                amount=(1 * 10**self.decimals)
-            )
+                amount=(1 * 10 ** self.decimals),
+            ),
         ).json()
 
-        amount = res.get('toTokenAmount', 0)
+        amount = res.get("toTokenAmount", 0)
 
-        return int(amount) / 10**stablecoin.decimals
+        return int(amount) / 10 ** stablecoin.decimals
 
     def dexscreener_price_in_stables(self):
         """Returns the price quoted from an aggregator in stables/USDC."""
@@ -75,14 +80,14 @@ class Token(Model):
             return 1.0
 
         res = requests.get(self.DEXSCREENER_ENDPOINT + self.address).json()
-        pairs = res.get('pairs') or []
+        pairs = res.get("pairs") or []
 
         if len(pairs) == 0:
             return 0
 
         # To avoid this kek...
         #   ValueError: could not convert string to float: '140344,272.43'
-        price = str(pairs[0].get('priceUsd') or 0).replace(',', '')
+        price = str(pairs[0].get("priceUsd") or 0).replace(",", "")
 
         return float(price)
 
@@ -94,10 +99,7 @@ class Token(Model):
 
         try:
             return self.dexscreener_price_in_stables()
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.JSONDecodeError
-        ):
+        except (requests.exceptions.HTTPError, requests.exceptions.JSONDecodeError):
             return price
 
     def chain_price_in_stables(self):
@@ -111,16 +113,16 @@ class Token(Model):
             amount, is_stable = Call(
                 ROUTER_ADDRESS,
                 [
-                    'getAmountOut(uint256,address,address)(uint256,bool)',
-                    1 * 10**self.decimals,
+                    "getAmountOut(uint256,address,address)(uint256,bool)",
+                    1 * 10 ** self.decimals,
                     self.address,
-                    stablecoin.address
-                ]
+                    stablecoin.address,
+                ],
             )()
         except ContractLogicError:
             return 0
 
-        return amount / 10**stablecoin.decimals
+        return amount / 10 ** stablecoin.decimals
 
     @classmethod
     def find(cls, address):
@@ -147,11 +149,13 @@ class Token(Model):
         address = address.lower()
 
         """Fetches and returns a token from chain."""
-        token_multi = Multicall([
-            Call(address, ['name()(string)'], [['name', None]]),
-            Call(address, ['symbol()(string)'], [['symbol', None]]),
-            Call(address, ['decimals()(uint8)'], [['decimals', None]])
-        ])
+        token_multi = Multicall(
+            [
+                Call(address, ["name()(string)"], [["name", None]]),
+                Call(address, ["symbol()(string)"], [["symbol", None]]),
+                Call(address, ["decimals()(uint8)"], [["decimals", None]]),
+            ]
+        )
 
         data = token_multi()
 
@@ -159,7 +163,7 @@ class Token(Model):
         token = cls.create(address=address, **data)
         token._update_price()
 
-        LOGGER.debug('Fetched %s:%s.', cls.__name__, address)
+        LOGGER.debug("Fetched %s:%s.", cls.__name__, address)
 
         return token
 
@@ -172,28 +176,28 @@ class Token(Model):
             try:
                 res = requests.get(tlist).json()
 
-                for token_data in res['tokens']:
+                for token_data in res["tokens"]:
                     # Skip tokens from other chains...
-                    if token_data.get('chainId', None) != our_chain_id:
+                    if token_data.get("chainId", None) != our_chain_id:
                         LOGGER.debug("Token not in chain: %s",
-                                     token_data['symbol'])
+                                     token_data["symbol"])
                         continue
 
-                    token_data['address'] = token_data['address'].lower()
+                    token_data["address"] = token_data["address"].lower()
 
-                    if token_data['address'] in IGNORED_TOKEN_ADDRESSES:
+                    if token_data["address"] in IGNORED_TOKEN_ADDRESSES:
                         continue
 
                     token = cls.create(**token_data)
-                    token.stable = 1 if "stablecoin" in token_data['tags'][0] else 0
+                    token.stable = 1 if "stablecoin" \
+                        in token_data["tags"][0] else 0
                     token._update_price()
 
+                    LOGGER.debug("Loaded %s:%s.", cls.__name__,
+                                 token_data["address"])
                     LOGGER.debug(
-                        'Loaded %s:%s.', cls.__name__, token_data[
-                            'address']
+                        "Token Name: %s. Is Stable: %s", token.symbol, token.stable
                     )
-                    LOGGER.debug('Token Name: %s. Is Stable: %s',
-                                 token.symbol, token.stable)
             except Exception as error:
                 LOGGER.error(error)
                 continue
