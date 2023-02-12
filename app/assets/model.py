@@ -3,7 +3,7 @@
 from multicall import Call, Multicall
 import requests
 import requests.exceptions
-from walrus import Model, TextField, IntegerField, FloatField
+from walrus import Model, TextField, IntegerField, FloatField, BooleanField
 from web3.auto import w3
 from web3.exceptions import ContractLogicError
 
@@ -23,6 +23,7 @@ class Token(Model):
     decimals = IntegerField()
     logoURI = TextField()
     price = FloatField(default=0)
+    stable = BooleanField(default=0)
 
     # See: https://docs.1inch.io/docs/aggregation-protocol/api/swagger
     AGGREGATOR_ENDPOINT = 'https://api.1inch.io/v4.0/10/quote'
@@ -37,7 +38,7 @@ class Token(Model):
         if self.address == STABLE_TOKEN_ADDRESS:
             return 1.0
 
-        chain_token = 'optimism:' + self.address.lower()
+        chain_token = 'kava:' + self.address.lower()
         res = requests.get(self.DEFILLAMA_ENDPOINT + chain_token).json()
         coins = res.get('coins', {})
 
@@ -170,9 +171,12 @@ class Token(Model):
         for tlist in TOKENLISTS:
             try:
                 res = requests.get(tlist).json()
+
                 for token_data in res['tokens']:
                     # Skip tokens from other chains...
                     if token_data.get('chainId', None) != our_chain_id:
+                        LOGGER.debug("Token not in chain: %s",
+                                     token_data['symbol'])
                         continue
 
                     token_data['address'] = token_data['address'].lower()
@@ -181,11 +185,15 @@ class Token(Model):
                         continue
 
                     token = cls.create(**token_data)
+                    token.stable = 1 if "stablecoin" in token_data['tags'][0] else 0
                     token._update_price()
 
                     LOGGER.debug(
-                        'Loaded %s:%s.', cls.__name__, token_data['address']
+                        'Loaded %s:%s.', cls.__name__, token_data[
+                            'address']
                     )
+                    LOGGER.debug('Token Name: %s. Is Stable: %s',
+                                 token.symbol, token.stable)
             except Exception as error:
                 LOGGER.error(error)
                 continue

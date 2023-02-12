@@ -24,7 +24,7 @@ class Assets(object):
 
         CACHE.set(cls.CACHE_KEY, assets)
         LOGGER.debug('Cache updated for %s.', cls.CACHE_KEY)
-
+        LOGGER.debug('Assets: %s', assets)
         return assets
 
     def on_get(self, req, resp):
