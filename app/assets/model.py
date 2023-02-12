@@ -99,7 +99,8 @@ class Token(Model):
 
         try:
             return self.dexscreener_price_in_stables()
-        except (requests.exceptions.HTTPError, requests.exceptions.JSONDecodeError):
+        except (requests.exceptions.HTTPError,
+                requests.exceptions.JSONDecodeError):
             return price
 
     def chain_price_in_stables(self):
@@ -195,9 +196,6 @@ class Token(Model):
 
                     LOGGER.debug("Loaded %s:%s.", cls.__name__,
                                  token_data["address"])
-                    LOGGER.debug(
-                        "Token Name: %s. Is Stable: %s", token.symbol, token.stable
-                    )
             except Exception as error:
                 LOGGER.error(error)
                 continue
