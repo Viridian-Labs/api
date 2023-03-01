@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "APP"
-version = "v0.4.0"
+version = "v0.5.0"
 description = "A backend for frontend that servers data from the blockchain"
-authors = ["Velodrome Team",]
+authors = ["Velodrome Team", "Equilibre Team"]
 
 [tool.poetry.dependencies]
 python = "^3.9"

@@ -14,6 +14,7 @@ from app.settings import (
     ROUTER_ADDRESS,
     STABLE_TOKEN_ADDRESS,
     IGNORED_TOKEN_ADDRESSES,
+    BLUECHIP_TOKEN_ADDRESSES
 )
 
 
@@ -85,20 +86,26 @@ class Token(Model):
         if len(pairs) == 0:
             return 0
 
+        pairs_in_kava = [pair for pair in pairs if pair["chainId"] == "kava"]
+
+        if len(pairs_in_kava) == 0:
+            price = str(pairs[0].get("priceUsd") or 0).replace(",", "")
+        else:
+            price = str(pairs_in_kava[0].get("priceUsd") or 0).replace(",", "")
+
         # To avoid this kek...
         #   ValueError: could not convert string to float: '140344,272.43'
-        price = str(pairs[0].get("priceUsd") or 0).replace(",", "")
 
         return float(price)
 
     def aggregated_price_in_stables(self):
-        price = self.defillama_price_in_stables()
+        price = self.dexscreener_price_in_stables()
 
-        if price != 0:
+        if price != 0 and self.address not in BLUECHIP_TOKEN_ADDRESSES:
             return price
 
         try:
-            return self.dexscreener_price_in_stables()
+            return self.defillama_price_in_stables()
         except (requests.exceptions.HTTPError,
                 requests.exceptions.JSONDecodeError):
             return price

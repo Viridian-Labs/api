@@ -68,6 +68,8 @@ ROUTE_TOKEN_ADDRESSES = \
     env('ROUTE_TOKEN_ADDRESSES', default='').lower().split(',')
 IGNORED_TOKEN_ADDRESSES = \
     env('IGNORED_TOKEN_ADDRESSES', default='').lower().split(',')
+BLUECHIP_TOKEN_ADDRESSES = \
+    env('BLUECHIP_TOKEN_ADDRESSES', default='').lower().split(',')
 # Will be picked automatically by web3.py
 WEB3_PROVIDER_URI = env('WEB3_PROVIDER_URI')
 
