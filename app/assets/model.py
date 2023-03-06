@@ -30,6 +30,8 @@ class Token(Model):
     logoURI = TextField()
     price = FloatField(default=0)
     stable = BooleanField(default=0)
+    # To indicate if it's a liquid version of another token as swKAVA
+    liquid_staked_address = TextField()
 
     # See: https://docs.1inch.io/docs/aggregation-protocol/api/swagger
     AGGREGATOR_ENDPOINT = "https://api.1inch.io/v4.0/10/quote"
@@ -195,7 +197,9 @@ class Token(Model):
 
                     if token_data["address"] in IGNORED_TOKEN_ADDRESSES:
                         continue
-
+                    if token_data["liquid_staked_address"]:
+                        token_data["liquid_staked_address"] = token_data["liquid_staked_address"].lower(
+                        )
                     token = cls.create(**token_data)
                     token.stable = 1 if "stablecoin" \
                         in token_data["tags"][0] else 0
