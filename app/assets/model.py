@@ -198,8 +198,8 @@ class Token(Model):
                     if token_data["address"] in IGNORED_TOKEN_ADDRESSES:
                         continue
                     if token_data["liquid_staked_address"]:
-                        token_data["liquid_staked_address"] = token_data["liquid_staked_address"].lower(
-                        )
+                        token_data["liquid_staked_address"] = \
+                            token_data["liquid_staked_address"].lower()
                     token = cls.create(**token_data)
                     token.stable = 1 if "stablecoin" \
                         in token_data["tags"][0] else 0
