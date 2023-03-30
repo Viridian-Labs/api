@@ -1,5 +1,6 @@
 import os
-from unittest import defaultTestLoader as loader, TextTestRunner
+from unittest import TextTestRunner
+from unittest import defaultTestLoader as loader
 
 
 def run():

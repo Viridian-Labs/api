@@ -7,9 +7,9 @@ from versiontools import Version
 
 from app import __version__
 from app.pairs import Pair, Token
-from app.settings import CACHE, DEFAULT_TOKEN_ADDRESS, STABLE_TOKEN_ADDRESS,\
-    ROUTE_TOKEN_ADDRESSES, VE_ADDRESS, LOGGER
-from multicall import Call, Multicall
+from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS,
+                          ROUTE_TOKEN_ADDRESSES, STABLE_TOKEN_ADDRESS,
+                          )
 
 
 class Configuration(object):
@@ -19,11 +19,10 @@ class Configuration(object):
         default_token = Token.find(DEFAULT_TOKEN_ADDRESS)
         stable_token = Token.find(STABLE_TOKEN_ADDRESS)
 
-        route_token_addresses = (
-            set(ROUTE_TOKEN_ADDRESSES) - {
-                DEFAULT_TOKEN_ADDRESS, STABLE_TOKEN_ADDRESS
-            }
-        )
+        route_token_addresses = set(ROUTE_TOKEN_ADDRESSES) - {
+            DEFAULT_TOKEN_ADDRESS,
+            STABLE_TOKEN_ADDRESS,
+        }
 
         route_tokens = [default_token, stable_token]
         for token_address in route_token_addresses:
@@ -49,7 +48,7 @@ class Configuration(object):
                     default_token=default_token._data,
                     stable_token=stable_token._data,
                     cache=(CACHE.connection is not None),
-                    version=str(Version(*__version__))
-                )
+                    version=str(Version(*__version__)),
+                ),
             )
         )

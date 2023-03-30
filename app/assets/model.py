@@ -1,21 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from multicall import Call, Multicall
 import requests
 import requests.exceptions
-from walrus import Model, TextField, IntegerField, FloatField, BooleanField
+from multicall import Call, Multicall
+from walrus import BooleanField, FloatField, IntegerField, Model, TextField
 from web3.auto import w3
 from web3.exceptions import ContractLogicError
 
-from app.settings import (
-    LOGGER,
-    CACHE,
-    TOKENLISTS,
-    ROUTER_ADDRESS,
-    STABLE_TOKEN_ADDRESS,
-    IGNORED_TOKEN_ADDRESSES,
-    BLUECHIP_TOKEN_ADDRESSES
-)
+from app.settings import (BLUECHIP_TOKEN_ADDRESSES, CACHE,
+                          IGNORED_TOKEN_ADDRESSES, LOGGER, ROUTER_ADDRESS,
+                          STABLE_TOKEN_ADDRESS, TOKENLISTS)
 
 
 class Token(Model):
@@ -108,7 +102,8 @@ class Token(Model):
 
         try:
             return self.defillama_price_in_stables()
-        except (requests.exceptions.HTTPError,
+        except (
+                requests.exceptions.HTTPError,
                 requests.exceptions.JSONDecodeError):
             return price
 
@@ -198,8 +193,9 @@ class Token(Model):
                     if token_data["address"] in IGNORED_TOKEN_ADDRESSES:
                         continue
                     if token_data["liquid_staked_address"]:
-                        token_data["liquid_staked_address"] = \
-                            token_data["liquid_staked_address"].lower()
+                        token_data["liquid_staked_address"] = token_data[
+                            "liquid_staked_address"
+                        ].lower()
                     token = cls.create(**token_data)
                     token.stable = 1 if "stablecoin" \
                         in token_data["tags"][0] else 0
