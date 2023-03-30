@@ -56,6 +56,9 @@ class Supply(object):
         data["circulating_supply"] = \
             data["total_supply"] - data["locked_supply"]
 
+        data["percentage_locked"] = \
+            data["locked_supply"] / data["total_supply"] * 100
+
         supply_data = json.dumps(dict(data=data))
 
         CACHE.setex(cls.CACHE_KEY, cls.CACHE_TIME, supply_data)
