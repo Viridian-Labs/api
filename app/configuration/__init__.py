@@ -8,7 +8,8 @@ from versiontools import Version
 from app import __version__
 from app.pairs import Pair, Token
 from app.settings import CACHE, DEFAULT_TOKEN_ADDRESS, STABLE_TOKEN_ADDRESS,\
-    ROUTE_TOKEN_ADDRESSES
+    ROUTE_TOKEN_ADDRESSES, VE_ADDRESS, LOGGER
+from multicall import Call, Multicall
 
 
 class Configuration(object):
@@ -38,7 +39,6 @@ class Configuration(object):
         else:
             tvl = None
             max_apr = None
-
         resp.status = falcon.HTTP_200
         resp.text = json.dumps(
             dict(

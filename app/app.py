@@ -11,6 +11,7 @@ from falcon_compression.middleware import CompressionMiddleware
 from app.assets import Assets
 from app.configuration import Configuration
 from app.pairs import Pairs
+from app.supply import Supply
 from app.settings import (
     LOGGER, honeybadger_handler, PORT, CORS_ALLOWED_DOMAINS
 )
@@ -41,6 +42,7 @@ app.add_route('/api/v1/accounts', Accounts())
 app.add_route('/api/v1/assets', Assets())
 app.add_route('/api/v1/configuration', Configuration())
 app.add_route('/api/v1/pairs', Pairs())
+app.add_route('/api/v1/supply', Supply())
 
 # TODO: Remove when no longer needed for backward-compat...
 app.add_route('/api/v1/baseAssets', Assets())
