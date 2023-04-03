@@ -4,6 +4,7 @@ from __future__ import absolute_import
 
 import sys
 from logging import StreamHandler
+from app.circulating import CirculatingSupply
 
 import falcon
 from falcon_compression.middleware import CompressionMiddleware
@@ -39,6 +40,7 @@ app.add_route("/api/v1/assets", Assets())
 app.add_route("/api/v1/configuration", Configuration())
 app.add_route("/api/v1/pairs", Pairs())
 app.add_route("/api/v1/supply", Supply())
+app.add_route("/api/v1/circulating-supply", CirculatingSupply())
 
 # TODO: Remove when no longer needed for backward-compat...
 app.add_route("/api/v1/baseAssets", Assets())
