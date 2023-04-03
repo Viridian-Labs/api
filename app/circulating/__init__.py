@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import json
 from datetime import timedelta
 
 import falcon
@@ -55,8 +54,6 @@ class CirculatingSupply(object):
         )
         data["circulating_supply"] = \
             data["total_supply"] - data["locked_supply"]
-
-        supply_data = json.dumps(dict(data=data))
 
         CACHE.setex(cls.CACHE_KEY, cls.CACHE_TIME, data["circulating_supply"])
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)
