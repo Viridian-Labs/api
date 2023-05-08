@@ -7,9 +7,15 @@ from walrus import BooleanField, FloatField, IntegerField, Model, TextField
 from web3.auto import w3
 from web3.exceptions import ContractLogicError
 
-from app.settings import (BLUECHIP_TOKEN_ADDRESSES, CACHE,
-                          IGNORED_TOKEN_ADDRESSES, LOGGER, ROUTER_ADDRESS,
-                          STABLE_TOKEN_ADDRESS, TOKENLISTS)
+from app.settings import (
+    BLUECHIP_TOKEN_ADDRESSES,
+    CACHE,
+    IGNORED_TOKEN_ADDRESSES,
+    LOGGER,
+    ROUTER_ADDRESS,
+    STABLE_TOKEN_ADDRESS,
+    TOKENLISTS,
+)
 
 
 class Token(Model):
@@ -82,7 +88,13 @@ class Token(Model):
         if len(pairs) == 0:
             return 0
 
-        pairs_in_kava = [pair for pair in pairs if pair["chainId"] == "kava"]
+        pairs_in_kava = [
+            pair
+            for pair in pairs
+            if pair["chainId"] == "kava"
+            and pair["dexId"] == "equilibre"
+            and pair["quoteToken"]["address"].lower() != self.address.lower()
+        ]
 
         if len(pairs_in_kava) == 0:
             price = str(pairs[0].get("priceUsd") or 0).replace(",", "")
@@ -101,9 +113,9 @@ class Token(Model):
             return price
 
         try:
-            return self.defillama_price_in_stables()
-        except (
-                requests.exceptions.HTTPError,
+            price = self.defillama_price_in_stables()
+            return price
+        except (requests.exceptions.HTTPError,
                 requests.exceptions.JSONDecodeError):
             return price
 
@@ -129,6 +141,76 @@ class Token(Model):
 
         return amount / 10 ** stablecoin.decimals
 
+    def chain_price_in_bluechips(self):
+        """Returns the price quoted from our router in stables/USDC
+        passing through a bluechip route"""
+        # Peg it forever.
+        if self.address == STABLE_TOKEN_ADDRESS:
+            return 1.0
+
+        stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
+        for b in BLUECHIP_TOKEN_ADDRESSES:
+            try:
+                bluechip = Token.find(b)
+                amountA, is_stable = Call(
+                    ROUTER_ADDRESS,
+                    [
+                        "getAmountOut(uint256,address,address)(uint256,bool)",
+                        1 * 10 ** self.decimals,
+                        self.address,
+                        bluechip.address,
+                    ],
+                )()
+                amountB, is_stable = Call(
+                    ROUTER_ADDRESS,
+                    [
+                        "getAmountOut(uint256,address,address)(uint256,bool)",
+                        amountA,
+                        bluechip.address,
+                        stablecoin.address,
+                    ],
+                )()
+                if amountB > 0:
+                    return amountB / 10 ** stablecoin.decimals
+            except ContractLogicError:
+                return 0
+
+        return 0
+
+    def chain_price_in_liquid_staked(self):
+        """Returns the price quoted from our router in stables/USDC
+        passing through a liquid staked route"""
+        # Peg it forever.
+        if self.address == STABLE_TOKEN_ADDRESS:
+            return 1.0
+
+        stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
+
+        try:
+            liquid = Token.find(self.liquid_staked_address)
+            amountA, is_stable = Call(
+                ROUTER_ADDRESS,
+                [
+                    "getAmountOut(uint256,address,address)(uint256,bool)",
+                    1 * 10 ** self.decimals,
+                    self.address,
+                    liquid.address,
+                ],
+            )()
+            amountB, is_stable = Call(
+                ROUTER_ADDRESS,
+                [
+                    "getAmountOut(uint256,address,address)(uint256,bool)",
+                    amountA,
+                    liquid.address,
+                    stablecoin.address,
+                ],
+            )()
+        except ContractLogicError:
+            return 0
+
+        return amountB / 10 ** stablecoin.decimals
+
     @classmethod
     def find(cls, address):
         """Loads a token from the database, of from chain if not found."""
@@ -143,9 +225,12 @@ class Token(Model):
     def _update_price(self):
         """Updates the token price in USD from different sources."""
         self.price = self.aggregated_price_in_stables()
-
         if self.price == 0:
             self.price = self.chain_price_in_stables()
+        if self.price == 0:
+            self.price = self.chain_price_in_bluechips()
+        if self.price == 0:
+            self.price = self.chain_price_in_liquid_staked()
 
         self.save()
 
@@ -201,7 +286,8 @@ class Token(Model):
                         in token_data["tags"][0] else 0
                     token._update_price()
 
-                    LOGGER.debug("Loaded %s:%s.", cls.__name__,
+                    LOGGER.debug("Loaded %s:%s.",
+                                 cls.__name__,
                                  token_data["address"])
             except Exception as error:
                 LOGGER.error(error)
