@@ -107,6 +107,7 @@ class Gauge(Model):
 
         if data.get("wrapped_bribe_address") not in (ADDRESS_ZERO, None):
             cls._fetch_external_rewards(gauge)
+            
 
         cls._fetch_internal_rewards(gauge)
         cls._update_apr(gauge)
@@ -139,7 +140,6 @@ class Gauge(Model):
         votes = votes / 10 ** token.decimals
 
         gauge.apr = cls.rebase_apr()
-
         if token.price and votes * token.price > 0:
             gauge.votes = votes
             gauge.apr += ((gauge.tbv * 52) / (votes * token.price)) * 100
@@ -176,12 +176,12 @@ class Gauge(Model):
 
             if token.price:
                 gauge.tbv += amount / 10 ** token.decimals * token.price
-
+            
             LOGGER.debug(
                 "Fetched %s:%s reward %s:%s.",
                 cls.__name__,
                 gauge.address,
-                bribe_token_address,
+                token.symbol,
                 gauge.rewards[token.address],
             )
 
@@ -228,6 +228,7 @@ class Gauge(Model):
 
             if token.price:
                 gauge.tbv += fee / 10 ** token.decimals * token.price
+           
 
             LOGGER.debug(
                 "Fetched %s:%s reward %s:%s.",

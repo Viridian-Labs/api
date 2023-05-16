@@ -129,6 +129,7 @@ class Pair(Model):
         )
 
         data = pair_multi()
+        LOGGER.debug("Loading %s:(%s) %s.", cls.__name__, data["symbol"], address)
 
         data["address"] = address
         data["total_supply"] = data["total_supply"] / (10 ** data["decimals"])
@@ -154,7 +155,7 @@ class Pair(Model):
         cls.query_delete(cls.address == address.lower())
 
         pair = cls.create(**data)
-        LOGGER.debug("Fetched %s:%s.", cls.__name__, pair.address)
+        LOGGER.debug("Fetched %s:(%s) %s.", cls.__name__, pair.symbol, pair.address)
 
         pair.syncup_gauge()
 

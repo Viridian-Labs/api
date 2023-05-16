@@ -188,6 +188,8 @@ class Token(Model):
 
         try:
             liquid = Token.find(self.liquid_staked_address)
+            if not liquid:
+                return 0
             amountA, is_stable = Call(
                 ROUTER_ADDRESS,
                 [
@@ -286,8 +288,9 @@ class Token(Model):
                         in token_data["tags"][0] else 0
                     token._update_price()
 
-                    LOGGER.debug("Loaded %s:%s.",
+                    LOGGER.debug("Loaded %s:(%s) %s.",
                                  cls.__name__,
+                                 token_data["symbol"],
                                  token_data["address"])
             except Exception as error:
                 LOGGER.error(error)
