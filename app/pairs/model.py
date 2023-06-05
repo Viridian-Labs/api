@@ -92,8 +92,8 @@ class Pair(Model):
         pairs_multi = Multicall(
             [
                 Call(
-                    FACTORY_ADDRESS, ["allPairs(uint256)(address)", idx], [
-                        [idx, None]]
+                    FACTORY_ADDRESS, ["allPairs(uint256)(address)", idx],
+                    [[idx, None]]
                 )
                 for idx in range(0, pairs_count)
             ]
@@ -129,8 +129,8 @@ class Pair(Model):
         )
 
         data = pair_multi()
-        LOGGER.debug("Loading %s:(%s) %s.",
-                     cls.__name__, data["symbol"], address)
+        LOGGER.debug("Loading %s:(%s) %s.", cls.__name__, data["symbol"],
+                     address)
 
         data["address"] = address
         data["total_supply"] = data["total_supply"] / (10 ** data["decimals"])
@@ -152,21 +152,25 @@ class Pair(Model):
         data["isStable"] = data["stable"]
         data["totalSupply"] = data["total_supply"]
 
-        #Symbol Patch due to multichain issue
-        if data['token0_address'] in MULTICHAIN_TOKEN_ADDRESSES:
-            aux_symbol = data['symbol']
-            data['symbol'] = aux_symbol[:5] + 'multi' + aux_symbol[5:]
-        if data['token1_address'] in MULTICHAIN_TOKEN_ADDRESSES:
-            aux_symbol = data['symbol']
+        # Symbol Patch due to multichain issue
+        if data["token0_address"] in MULTICHAIN_TOKEN_ADDRESSES:
+            aux_symbol = data["symbol"]
+            data["symbol"] = aux_symbol[:5] + "multi" + aux_symbol[5:]
+        if data["token1_address"] in MULTICHAIN_TOKEN_ADDRESSES:
+            aux_symbol = data["symbol"]
             slash_index = aux_symbol.find("/") + 1
-            data['symbol'] = aux_symbol[:slash_index] + 'multi' + aux_symbol[slash_index:]
-            
+            data["symbol"] = (
+                aux_symbol[:slash_index] + "multi" + aux_symbol[slash_index:]
+            )
+
         # Cleanup old data...
         cls.query_delete(cls.address == address.lower())
 
         pair = cls.create(**data)
         LOGGER.debug("Fetched %s:(%s) %s.",
-                     cls.__name__, pair.symbol, pair.address)
+                     cls.__name__,
+                     pair.symbol,
+                     pair.address)
 
         pair.syncup_gauge()
 
