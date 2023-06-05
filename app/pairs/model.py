@@ -9,7 +9,7 @@ from web3.constants import ADDRESS_ZERO
 from app.assets import Token
 from app.gauges import Gauge
 from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, FACTORY_ADDRESS,
-                          LOGGER, VOTER_ADDRESS)
+                          LOGGER, MULTICHAIN_TOKEN_ADDRESSES, VOTER_ADDRESS)
 
 
 class Pair(Model):
@@ -152,6 +152,15 @@ class Pair(Model):
         data["isStable"] = data["stable"]
         data["totalSupply"] = data["total_supply"]
 
+        #Symbol Patch due to multichain issue
+        if data['token0_address'] in MULTICHAIN_TOKEN_ADDRESSES:
+            aux_symbol = data['symbol']
+            data['symbol'] = aux_symbol[:5] + 'multi' + aux_symbol[5:]
+        if data['token1_address'] in MULTICHAIN_TOKEN_ADDRESSES:
+            aux_symbol = data['symbol']
+            slash_index = aux_symbol.find("/") + 1
+            data['symbol'] = aux_symbol[:slash_index] + 'multi' + aux_symbol[slash_index:]
+            
         # Cleanup old data...
         cls.query_delete(cls.address == address.lower())
 
