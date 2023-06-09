@@ -7,15 +7,9 @@ from walrus import BooleanField, FloatField, IntegerField, Model, TextField
 from web3.auto import w3
 from web3.exceptions import ContractLogicError
 
-from app.settings import (
-    BLUECHIP_TOKEN_ADDRESSES,
-    CACHE,
-    IGNORED_TOKEN_ADDRESSES,
-    LOGGER,
-    ROUTER_ADDRESS,
-    STABLE_TOKEN_ADDRESS,
-    TOKENLISTS,
-)
+from app.settings import (AXELAR_BLUECHIPS_ADDRESSES, BLUECHIP_TOKEN_ADDRESSES,
+                          CACHE, IGNORED_TOKEN_ADDRESSES, LOGGER,
+                          ROUTER_ADDRESS, STABLE_TOKEN_ADDRESS, TOKENLISTS)
 
 
 class Token(Model):
@@ -97,7 +91,9 @@ class Token(Model):
         ]
 
         if len(pairs_in_kava) == 0:
+            LOGGER.debug(self.symbol)
             price = str(pairs[0].get("priceUsd") or 0).replace(",", "")
+            LOGGER.debug(price)
         else:
             price = str(pairs_in_kava[0].get("priceUsd") or 0).replace(",", "")
 
@@ -110,10 +106,12 @@ class Token(Model):
         price = self.dexscreener_price_in_stables()
 
         if price != 0 and self.address not in BLUECHIP_TOKEN_ADDRESSES:
+            LOGGER.debug("Dexscreener price for %s: %s", self.symbol, price)
             return price
 
         try:
             price = self.defillama_price_in_stables()
+            LOGGER.debug("Defillama price for %s: %s", self.symbol, price)
             return price
         except (requests.exceptions.HTTPError,
                 requests.exceptions.JSONDecodeError):
@@ -213,6 +211,12 @@ class Token(Model):
 
         return amountB / 10 ** stablecoin.decimals
 
+    def temporary_price_in_bluechips(self):
+        mToken = Token.find(self.liquid_staked_address)
+        if not mToken:
+            return 0
+        return mToken.price
+
     @classmethod
     def find(cls, address):
         """Loads a token from the database, of from chain if not found."""
@@ -233,7 +237,8 @@ class Token(Model):
             self.price = self.chain_price_in_bluechips()
         if self.price == 0:
             self.price = self.chain_price_in_liquid_staked()
-
+        if self.price == 0 and self.address in AXELAR_BLUECHIPS_ADDRESSES:
+            self.price = self.temporary_price_in_bluechips()
         self.save()
 
     @classmethod

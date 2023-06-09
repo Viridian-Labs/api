@@ -76,6 +76,9 @@ BLUECHIP_TOKEN_ADDRESSES = (
 MULTICHAIN_TOKEN_ADDRESSES = (
     env("MULTICHAIN_TOKEN_ADDRESSES", default="").lower().split(",")
 )
+AXELAR_BLUECHIPS_ADDRESSES = (
+    env("AXELAR_BLUECHIPS_ADDRESSES", default="").lower().split(",")
+)
 # Will be picked automatically by web3.py
 WEB3_PROVIDER_URI = env("WEB3_PROVIDER_URI")
 
