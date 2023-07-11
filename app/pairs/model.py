@@ -8,8 +8,14 @@ from web3.constants import ADDRESS_ZERO
 
 from app.assets import Token
 from app.gauges import Gauge
-from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, FACTORY_ADDRESS,
-                          LOGGER, MULTICHAIN_TOKEN_ADDRESSES, VOTER_ADDRESS)
+from app.settings import (
+    CACHE,
+    DEFAULT_TOKEN_ADDRESS,
+    FACTORY_ADDRESS,
+    LOGGER,
+    MULTICHAIN_TOKEN_ADDRESSES,
+    VOTER_ADDRESS,
+)
 
 
 class Pair(Model):
@@ -92,7 +98,8 @@ class Pair(Model):
         pairs_multi = Multicall(
             [
                 Call(
-                    FACTORY_ADDRESS, ["allPairs(uint256)(address)", idx],
+                    FACTORY_ADDRESS,
+                    ["allPairs(uint256)(address)", idx],
                     [[idx, None]]
                 )
                 for idx in range(0, pairs_count)
@@ -129,15 +136,17 @@ class Pair(Model):
         )
 
         data = pair_multi()
-        LOGGER.debug("Loading %s:(%s) %s.", cls.__name__, data["symbol"],
-                     address)
+        LOGGER.debug("Loading %s:(%s) %s.",
+                     cls.__name__, data["symbol"], address)
 
         data["address"] = address
         data["total_supply"] = data["total_supply"] / (10 ** data["decimals"])
 
         token0 = Token.find(data["token0_address"])
         token1 = Token.find(data["token1_address"])
-
+        # if token0.address in IGNORED_TOKEN_ADDRESSES
+        # or token1.address in IGNORED_TOKEN_ADDRESSES:
+        #     return None
         data["reserve0"] = data["reserve0"] / (10 ** token0.decimals)
         data["reserve1"] = data["reserve1"] / (10 ** token1.decimals)
 
@@ -168,9 +177,7 @@ class Pair(Model):
 
         pair = cls.create(**data)
         LOGGER.debug("Fetched %s:(%s) %s.",
-                     cls.__name__,
-                     pair.symbol,
-                     pair.address)
+                     cls.__name__, pair.symbol, pair.address)
 
         pair.syncup_gauge()
 
@@ -182,12 +189,36 @@ class Pair(Model):
         tvl = 0
 
         if token0.price and token0.price != 0:
+            # LOGGER.debug(
+            #     "Pool %s:(%s) has a price of %s
+            # for token0. And a reserve of %s.",
+            #     cls.__name__,
+            #     pool_data["symbol"],
+            #     token0.price,
+            #     pool_data["reserve0"],
+            # )
             tvl += pool_data["reserve0"] * token0.price
 
         if token1.price and token1.price != 0:
+            # LOGGER.debug(
+            #     "Pool %s:(%s) has a price of %s
+            # for token1. And a reserve of %s.",
+            #     cls.__name__,
+            #     pool_data["symbol"],
+            #     token1.price,
+            #     pool_data["reserve1"],
+            # )
             tvl += pool_data["reserve1"] * token1.price
 
         if tvl != 0 and (token0.price == 0 or token1.price == 0):
+            LOGGER.debug(
+                "Pool %s:(%s) has a price of 0 for one of its tokens.",
+                cls.__name__,
+                pool_data["symbol"],
+            )
             tvl = tvl * 2
-
+        LOGGER.debug(
+            "Pool %s:(%s) has a TVL of %s.",
+            cls.__name__, pool_data["symbol"], tvl
+        )
         return tvl

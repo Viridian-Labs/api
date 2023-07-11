@@ -7,9 +7,16 @@ from walrus import BooleanField, FloatField, IntegerField, Model, TextField
 from web3.auto import w3
 from web3.exceptions import ContractLogicError
 
-from app.settings import (AXELAR_BLUECHIPS_ADDRESSES, BLUECHIP_TOKEN_ADDRESSES,
-                          CACHE, IGNORED_TOKEN_ADDRESSES, LOGGER,
-                          ROUTER_ADDRESS, STABLE_TOKEN_ADDRESS, TOKENLISTS)
+from app.settings import (
+    AXELAR_BLUECHIPS_ADDRESSES,
+    BLUECHIP_TOKEN_ADDRESSES,
+    CACHE,
+    IGNORED_TOKEN_ADDRESSES,
+    LOGGER,
+    ROUTER_ADDRESS,
+    STABLE_TOKEN_ADDRESS,
+    TOKENLISTS,
+)
 
 
 class Token(Model):
@@ -26,6 +33,9 @@ class Token(Model):
     stable = BooleanField(default=0)
     # To indicate if it's a liquid version of another token as swKAVA
     liquid_staked_address = TextField()
+    # TODO: This is the timestamp of the block where the token was created
+    # TODO: needed to refresh token data of not whitelisted tokens
+    created_at = FloatField(default=w3.eth.get_block("latest").timestamp)
 
     # See: https://docs.1inch.io/docs/aggregation-protocol/api/swagger
     AGGREGATOR_ENDPOINT = "https://api.1inch.io/v4.0/10/quote"
@@ -103,8 +113,11 @@ class Token(Model):
         return float(price)
 
     def aggregated_price_in_stables(self):
+        # LOGGER.debug("Aggregated price for %s", self.symbol)
         price = self.dexscreener_price_in_stables()
-
+        if self.address == "0xfa9343c3897324496a05fc75abed6bac29f8a40f":
+            LOGGER.debug("USDC price bad")
+            return 0
         if price != 0 and self.address not in BLUECHIP_TOKEN_ADDRESSES:
             LOGGER.debug("Dexscreener price for %s: %s", self.symbol, price)
             return price
@@ -122,7 +135,7 @@ class Token(Model):
         # Peg it forever.
         if self.address == STABLE_TOKEN_ADDRESS:
             return 1.0
-
+        # LOGGER.debug("Chain price for %s", self.symbol)
         stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
         try:
             amount, is_stable = Call(
@@ -134,6 +147,7 @@ class Token(Model):
                     stablecoin.address,
                 ],
             )()
+            # LOGGER.debug("Chain price for %s: %s", self.symbol, amount)
         except ContractLogicError:
             return 0
 
@@ -145,7 +159,7 @@ class Token(Model):
         # Peg it forever.
         if self.address == STABLE_TOKEN_ADDRESS:
             return 1.0
-
+        # LOGGER.debug("Chain price Bluechips for %s", self.symbol)
         stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
         for b in BLUECHIP_TOKEN_ADDRESSES:
             try:
@@ -181,7 +195,7 @@ class Token(Model):
         # Peg it forever.
         if self.address == STABLE_TOKEN_ADDRESS:
             return 1.0
-
+        # LOGGER.debug("Chain price Liquid Staked for %s", self.symbol)
         stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
 
         try:
@@ -224,8 +238,10 @@ class Token(Model):
             return None
 
         try:
+
             return cls.load(address.lower())
         except KeyError:
+            LOGGER.error("ERROR Fetching %s:%s...", cls.__name__, address)
             return cls.from_chain(address.lower())
 
     def _update_price(self):
@@ -239,12 +255,13 @@ class Token(Model):
             self.price = self.chain_price_in_liquid_staked()
         if self.price == 0 and self.address in AXELAR_BLUECHIPS_ADDRESSES:
             self.price = self.temporary_price_in_bluechips()
+        # LOGGER.debug("Updated price of %s:%s.", self.address, self.price)
         self.save()
 
     @classmethod
     def from_chain(cls, address, logoURI=None):
         address = address.lower()
-
+        LOGGER.debug("Fetching from chain %s:%s...", cls.__name__, address)
         """Fetches and returns a token from chain."""
         token_multi = Multicall(
             [
@@ -274,29 +291,39 @@ class Token(Model):
                 res = requests.get(tlist).json()
 
                 for token_data in res["tokens"]:
-                    # Skip tokens from other chains...
-                    if token_data.get("chainId", None) != our_chain_id:
-                        LOGGER.debug("Token not in chain: %s",
-                                     token_data["symbol"])
+                    try:
+                        # Skip tokens from other chains...
+                        if token_data.get("chainId", None) != our_chain_id:
+                            LOGGER.debug("Token not in chain: %s",
+                                         token_data["symbol"])
+                            continue
+                        LOGGER.debug(
+                            "Loading %s---------------------------",
+                            token_data["symbol"],
+                        )
+                        token_data["address"] = token_data["address"].lower()
+
+                        if token_data["address"] in IGNORED_TOKEN_ADDRESSES:
+                            continue
+                        if token_data["liquid_staked_address"]:
+                            token_data["liquid_staked_address"] = token_data[
+                                "liquid_staked_address"
+                            ].lower()
+                        token = cls.create(**token_data)
+                        token.stable = 1 if "stablecoin" \
+                            in token_data["tags"][0] else 0
+                        token._update_price()
+
+                        LOGGER.debug(
+                            "Loaded %s:(%s) %s with price %s.-------------",
+                            cls.__name__,
+                            token_data["symbol"],
+                            token_data["address"],
+                            token.price,
+                        )
+                    except Exception as error:
+                        LOGGER.error(error)
                         continue
-
-                    token_data["address"] = token_data["address"].lower()
-
-                    if token_data["address"] in IGNORED_TOKEN_ADDRESSES:
-                        continue
-                    if token_data["liquid_staked_address"]:
-                        token_data["liquid_staked_address"] = token_data[
-                            "liquid_staked_address"
-                        ].lower()
-                    token = cls.create(**token_data)
-                    token.stable = 1 if "stablecoin" \
-                        in token_data["tags"][0] else 0
-                    token._update_price()
-
-                    LOGGER.debug("Loaded %s:(%s) %s.",
-                                 cls.__name__,
-                                 token_data["symbol"],
-                                 token_data["address"])
             except Exception as error:
                 LOGGER.error(error)
                 continue
