@@ -118,6 +118,9 @@ class Token(Model):
         if self.address == "0xfa9343c3897324496a05fc75abed6bac29f8a40f":
             LOGGER.debug("USDC price bad")
             return 0
+        if self.address == "0x919c1c267bc06a7039e03fcc2ef738525769109c":
+            LOGGER.debug("USDt price bad")
+            return 0
         if price != 0 and self.address not in BLUECHIP_TOKEN_ADDRESSES:
             LOGGER.debug("Dexscreener price for %s: %s", self.symbol, price)
             return price
