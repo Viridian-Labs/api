@@ -30,3 +30,6 @@ api-test = 'app.tests:run'
 [build-system]
 requires = ["poetry>=1.2.1"]
 build-backend = "poetry.masonry.api"
+
+[tool.black]
+line-length = 79

@@ -66,6 +66,7 @@ TOKENLISTS = env("TOKENLISTS", default="").split("|")
 DEFAULT_TOKEN_ADDRESS = env(
     "DEFAULT_TOKEN_ADDRESS").lower()
 STABLE_TOKEN_ADDRESS = env("STABLE_TOKEN_ADDRESS").lower()
+NATIVE_TOKEN_ADDRESS = env("NATIVE_TOKEN_ADDRESS").lower()
 ROUTE_TOKEN_ADDRESSES = env("ROUTE_TOKEN_ADDRESSES",
                             default="").lower().split(",")
 IGNORED_TOKEN_ADDRESSES = env(
@@ -93,6 +94,8 @@ TREASURY_ADDRESS = env("TREASURY_ADDRESS")
 SYNC_WAIT_SECONDS = env.int("SYNC_WAIT_SECONDS", default=0)
 
 CORS_ALLOWED_DOMAINS = env("CORS_ALLOWED_DOMAINS", default=None)
+
+HALT_API_PRICE_FEEDS = env("HALT_API_PRICE_FEEDS", default=False)
 
 # Placeholder for our cache instance (Redis)
 CACHE = None
