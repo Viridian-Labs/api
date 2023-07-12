@@ -202,9 +202,8 @@ class Token(Model):
                     amountB, is_stable = Call(
                         ROUTER_ADDRESS,
                         [
-                            """
-                            getAmountOut(uint256,address,address)(uint256,bool)
-                            """,
+                            "getAmountOut(uint256,address,address)"
+                            + "(uint256,bool)",
                             amountA,
                             token_address,
                             nativecoin.address,
@@ -213,9 +212,8 @@ class Token(Model):
                     amountC, is_stable = Call(
                         ROUTER_ADDRESS,
                         [
-                            """
-                            getAmountOut(uint256,address,address)(uint256,bool)
-                            """,
+                            "getAmountOut(uint256,address,address)"
+                            + "(uint256,bool)",
                             amountB,
                             nativecoin.address,
                             stablecoin.address,
@@ -237,9 +235,8 @@ class Token(Model):
                     amountA, is_stable = Call(
                         ROUTER_ADDRESS,
                         [
-                            """
-                            getAmountOut(uint256,address,address)(uint256,bool)
-                            """,
+                            "getAmountOut(uint256,address,address)"
+                            + "(uint256,bool)",
                             1 * 10 ** self.decimals,
                             self.address,
                             lion.address,
@@ -248,9 +245,8 @@ class Token(Model):
                     amountB, is_stable = Call(
                         ROUTER_ADDRESS,
                         [
-                            """
-                            getAmountOut(uint256,address,address)(uint256,bool)
-                            """,
+                            "getAmountOut(uint256,address,address)"
+                            + "(uint256,bool)",
                             amountA,
                             lion.address,
                             token.address,
@@ -259,9 +255,8 @@ class Token(Model):
                     amountC, is_stable = Call(
                         ROUTER_ADDRESS,
                         [
-                            """
-                            getAmountOut(uint256,address,address)(uint256,bool)
-                            """,
+                            "getAmountOut(uint256,address,address)"
+                            + "(uint256,bool)",
                             amountB,
                             token.address,
                             stablecoin.address,
