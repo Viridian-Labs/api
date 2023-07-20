@@ -3,12 +3,16 @@
 from datetime import timedelta
 
 import falcon
-from multicall import Call, Multicall
 
-from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER,
-                          TREASURY_ADDRESS, VE_ADDRESS)
+from app.settings import (
+    CACHE,
+    DEFAULT_TOKEN_ADDRESS,
+    LOGGER,
+)
 
 from app.assets import Token
+
+
 class VaraPrice(object):
     """Handles supply info"""
 
@@ -17,7 +21,7 @@ class VaraPrice(object):
 
     @classmethod
     def recache(cls):
-        
+
         token = Token.find(DEFAULT_TOKEN_ADDRESS)
         LOGGER.debug("Token: %s", token)
         LOGGER.debug("VARA price: %s", token.price)
