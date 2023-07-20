@@ -8,6 +8,7 @@ from app.assets import Assets, Token
 from app.pairs import Pair, Pairs
 from app.settings import (LOGGER, SYNC_WAIT_SECONDS,
                           reset_multicall_pool_executor)
+from app.vara import VaraPrice
 
 
 def sync():
@@ -32,6 +33,7 @@ def sync():
     # Reset any cache...
     Pairs.recache()
     Assets.recache()
+    VaraPrice.recache()
 
     LOGGER.info("Syncing pairs done in %s seconds.", time.time() - t0)
 

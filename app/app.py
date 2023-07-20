@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import sys
 from logging import StreamHandler
 from app.circulating import CirculatingSupply
+from app.vara import VaraPrice
 
 import falcon
 from falcon_compression.middleware import CompressionMiddleware
@@ -41,6 +42,7 @@ app.add_route("/api/v1/configuration", Configuration())
 app.add_route("/api/v1/pairs", Pairs())
 app.add_route("/api/v1/supply", Supply())
 app.add_route("/api/v1/circulating-supply", CirculatingSupply())
+app.add_route("/api/v1/vara-price", VaraPrice())
 
 # TODO: Remove when no longer needed for backward-compat...
 app.add_route("/api/v1/baseAssets", Assets())
