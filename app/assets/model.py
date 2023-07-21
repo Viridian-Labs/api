@@ -366,17 +366,22 @@ class Token(Model):
         if HALT_API_PRICE_FEEDS is False:
             self.price = self.aggregated_price_in_stables()
 
-        if self.price == 0 and self.symbol not in ["BEAR", "DEXI"]:
+        if self.price == 0 and self.symbol not in ["BEAR", "DEXI", "ATOM"]:
+            # LOGGER.debug("Chain price in stables")
             self.price = self.chain_price_in_stables()
         if self.price == 0:
+            # LOGGER.debug("Chain price in bluechips")
             self.price = self.chain_price_in_bluechips()
         if self.price == 0:
+            # LOGGER.debug("Chain price in stables and default token")
             self.price = self.chain_price_in_stables_and_default_token()
         if self.price == 0:
+            # LOGGER.debug("Chain price in liquid staked")
             self.price = self.chain_price_in_liquid_staked()
         if self.price == 0 and self.address in AXELAR_BLUECHIPS_ADDRESSES:
+            # LOGGER.debug("Chain price in bluechips")
             self.price = self.temporary_price_in_bluechips()
-        # LOGGER.debug("Updated price of %s:%s.", self.address, self.price)
+        LOGGER.debug("Updated price of %s:%s.", self.address, self.price)
         self.save()
 
     @classmethod
