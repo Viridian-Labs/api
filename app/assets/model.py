@@ -363,8 +363,13 @@ class Token(Model):
 
     def _update_price(self):
         """Updates the token price in USD from different sources."""
-        if HALT_API_PRICE_FEEDS is False or self.symbol in ["axlWETH", "TIGER",
-                                                            "SHRP", "xSHRAP"]:
+        if HALT_API_PRICE_FEEDS is False or self.symbol in ["axlWETH",
+                                                            "TIGER",
+                                                            "SHRP",
+                                                            "xSHRAP",
+                                                            "axlWBTC",
+                                                            "axlATOM",
+                                                            "axlWETH"]:
             self.price = self.aggregated_price_in_stables()
 
         if self.price == 0 and self.symbol not in ["BEAR", "DEXI", "ATOM"]:
