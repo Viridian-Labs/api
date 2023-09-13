@@ -381,12 +381,14 @@ class Token(Model):
         if self.price == 0:
             # LOGGER.debug("Chain price in stables and default token")
             self.price = self.chain_price_in_stables_and_default_token()
-        if self.price == 0 or self.symbol in ["bVARA"]:
+        if self.price == 0:
             # LOGGER.debug("Chain price in liquid staked")
             self.price = self.chain_price_in_liquid_staked()
         if self.price == 0 and self.address in AXELAR_BLUECHIPS_ADDRESSES:
             # LOGGER.debug("Chain price in bluechips")
             self.price = self.temporary_price_in_bluechips()
+        if self.symbol in ["bVARA"]:
+            self.price = Token.find(self.liquid_staked_address.lower()).price
         LOGGER.debug("Updated price of %s:%s.", self.address, self.price)
 
         self.save()
