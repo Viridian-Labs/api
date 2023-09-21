@@ -29,50 +29,59 @@ class Configuration(object):
     CACHE_TIME = timedelta(minutes=5)
 
     def dexscreener_volume_data(self):
-        volume_m5 = 0
-        volume_h1 = 0
-        volume_h6 = 0
-        volume_h24 = 0
-        pairs_addresses = [p.address for p in Pair.all()]
-        n = math.ceil(len(pairs_addresses) / (len(pairs_addresses) % 30))
-        LOGGER.debug(n)
-        pairs_addresses = [
-            pairs_addresses[i:i + n] for i in range(0, len(pairs_addresses), n)
-        ]
-        if pairs_addresses:
-            for sub_pair_group in pairs_addresses:
+        try:
+            volume_m5 = 0
+            volume_h1 = 0
+            volume_h6 = 0
+            volume_h24 = 0
+            pairs_addresses = [p.address for p in Pair.all()]
+            n = math.ceil(len(pairs_addresses) / (len(pairs_addresses) % 30))
+            LOGGER.debug(n)
+            pairs_addresses = [
+                pairs_addresses[i:i + n] for i in
+                range(0, len(pairs_addresses), n)
+            ]
+            if pairs_addresses:
+                for sub_pair_group in pairs_addresses:
 
-                res = requests.get(
-                    self.DEXSCREENER_ENDPOINT + ",".join(sub_pair_group)
-                ).json()
-                pairs = res.get("pairs")
+                    res = requests.get(
+                        self.DEXSCREENER_ENDPOINT + ",".join(sub_pair_group)
+                    ).json()
+                    pairs = res.get("pairs")
 
-                if pairs:
-                    volume_m5 += sum(
-                        map(lambda p: (p["volume"]["m5"] or 0), pairs))
-                    volume_h1 += sum(
-                        map(lambda p: (p["volume"]["h1"] or 0), pairs))
-                    volume_h6 += sum(
-                        map(lambda p: (p["volume"]["h6"] or 0), pairs))
-                    volume_h24 += sum(
-                        map(lambda p: (p["volume"]["h24"] or 0), pairs))
+                    if pairs:
+                        volume_m5 += sum(
+                            map(lambda p: (p["volume"]["m5"] or 0), pairs))
+                        volume_h1 += sum(
+                            map(lambda p: (p["volume"]["h1"] or 0), pairs))
+                        volume_h6 += sum(
+                            map(lambda p: (p["volume"]["h6"] or 0), pairs))
+                        volume_h24 += sum(
+                            map(lambda p: (p["volume"]["h24"] or 0), pairs))
 
-            data = dict(
-                volume_m5=volume_m5,
-                volume_h1=volume_h1,
-                volume_h6=volume_h6,
-                volume_h24=volume_h24,
-            )
-            CACHE.setex(
-                self.CACHE_KEY, self.CACHE_TIME, json.dumps(
-                    data, cls=JSONEncoder)
-            )
-            return data
-        return dict(
-            volume_m5=None,
-            volume_h1=None,
-            volume_h6=None,
-            volume_h24=None)
+                data = dict(
+                    volume_m5=volume_m5,
+                    volume_h1=volume_h1,
+                    volume_h6=volume_h6,
+                    volume_h24=volume_h24,
+                )
+                CACHE.setex(
+                    self.CACHE_KEY, self.CACHE_TIME, json.dumps(
+                        data, cls=JSONEncoder)
+                )
+                return data
+            return dict(
+                volume_m5=None,
+                volume_h1=None,
+                volume_h6=None,
+                volume_h24=None)
+        except Exception as e:
+            LOGGER.error(e)
+            return dict(
+                volume_m5=None,
+                volume_h1=None,
+                volume_h6=None,
+                volume_h24=None)
 
     def on_get(self, req, resp):
         default_token = Token.find(DEFAULT_TOKEN_ADDRESS)
