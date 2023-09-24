@@ -21,9 +21,9 @@ from app.settings import (
     NATIVE_TOKEN_ADDRESS,
     ROUTE_TOKEN_ADDRESSES,
     ROUTER_ADDRESS,
-    STABLE_TOKEN_ADDRESS,
-    USDT_ADDRESS,
+    STABLE_TOKEN_ADDRESS,    
     TOKENLISTS,
+    PRICE_FEED_ORDER
 )
 
 
@@ -378,14 +378,17 @@ class Token(Model):
     def _update_price(self):
         start_time = time.time()
 
+        # Check if the token is ignored
         if self.symbol in IGNORED_TOKEN_ADDRESSES:
             return self._finalize_update(0, start_time)
 
+        # Check if external sources should be used
         if not HALT_API_PRICE_FEEDS or self.symbol in SPECIAL_SYMBOLS:
             price = self.aggregated_price_in_stables()
             if price > 0:
                 return self._finalize_update(price, start_time)
 
+        # Check token decimals
         if not self.decimals:
             LOGGER.debug("Token doesn't have any decimals %s", self.symbol)
             return 0
@@ -394,31 +397,31 @@ class Token(Model):
             LOGGER.error("Invalid value for decimals for token: %s", self.address)
             return 0
 
-        price_functions = [
-            ("Chain price in stables", self.chain_price_in_stables),
-            ("Chain price in bluechips", self.chain_price_in_bluechips),
-            ("Chain price in stables and default token", self.chain_price_in_stables_and_default_token),
-            ("Chain price in liquid staked", self.chain_price_in_liquid_staked),
-        ]
+        # Define price functions with names
+        price_functions = {
+            "Chain price in stables": self.chain_price_in_stables,
+            "Chain price in bluechips": self.chain_price_in_bluechips,
+            "Chain price in stables and default token": self.chain_price_in_stables_and_default_token,
+            "Chain price in liquid staked": self.chain_price_in_liquid_staked,
+        }
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future_to_price_function = {executor.submit(price_function): log_message for log_message, price_function in price_functions}
-            for future in concurrent.futures.as_completed(future_to_price_function):
-                log_message = future_to_price_function[future]
-                try:
-                    price = future.result()
-                    if price > 0:
-                        return self._finalize_update(price, start_time)
-                except Exception as exc:
-                    LOGGER.error('%s generated an exception: %s' % (log_message, exc))
+        # Iterate through PRICE_FEED_ORDER and call functions in the specified order
+        for func_name in PRICE_FEED_ORDER:
+            if func_name in price_functions:
+                func = price_functions[func_name]
+                price = func()
+                if price > 0:
+                    return self._finalize_update(price, start_time)
 
+        # Check for Axelar bluechips
         if self.address in AXELAR_BLUECHIPS_ADDRESSES:
             price = self.temporary_price_in_bluechips()
             if price > 0:
                 return self._finalize_update(price, start_time)
 
+        # If none of the conditions were met, handle accordingly
         return self._finalize_update(0, start_time)
-    
+
 
     def _get_chain_price(self, log_message, price_function):
         LOGGER.debug(log_message)
@@ -462,12 +465,12 @@ class Token(Model):
 
         def fetch_tokenlist(tlist):
             tokens = []
-            with requests.Session() as session:  # Creating a new session for each thread
+            with requests.Session() as session:  
                 try:
                     res = session.get(tlist).json()
                 except (requests.RequestException, json.JSONDecodeError) as error:
                     LOGGER.error("Error fetching token list %s: %s", tlist, error)
-                    return tokens  # return empty list in case of error
+                    return tokens   
 
                 for token_data in res.get("tokens", []):
                     try:
@@ -503,4 +506,4 @@ class Token(Model):
                 except Exception as exc:
                     LOGGER.error('The function generated an exception: %s' % exc)
 
-        return all_tokens  # or do whatever you want with all_tokens
+        return all_tokens  

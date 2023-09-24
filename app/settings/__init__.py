@@ -71,6 +71,7 @@ ROUTE_TOKEN_ADDRESSES = env("ROUTE_TOKEN_ADDRESSES",
                             default="").lower().split(",")
 IGNORED_TOKEN_ADDRESSES = env(
     "IGNORED_TOKEN_ADDRESSES", default="").lower().split(",")
+
 SPECIAL_SYMBOLS = env(
     "SPECIAL_SYMBOLS", default="").lower().split(",")
 BLUECHIP_TOKEN_ADDRESSES = (
@@ -83,8 +84,13 @@ AXELAR_BLUECHIPS_ADDRESSES = (
     env("AXELAR_BLUECHIPS_ADDRESSES", default="").lower().split(",")
 )
 
-USDT_ADDRESS = env(
-    "USDT_ADDRESS", default="").lower().split(",")
+PRICE_FEED_ORDER = env(
+    "PRICE_FEED_ORDER", default=[    
+    "chain_price_in_stables",
+    "chain_price_in_bluechips",
+    "chain_price_in_stables_and_default_token",
+    "chain_price_in_liquid_staked"
+  ])
 
 # Will be picked automatically by web3.py
 WEB3_PROVIDER_URI = env("WEB3_PROVIDER_URI")

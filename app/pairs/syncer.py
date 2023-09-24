@@ -67,7 +67,6 @@ def sync_forever():
             sync_proc.close()
             del sync_proc
 
-        exit(0)
         time.sleep(SYNC_WAIT_SECONDS)
 
 
