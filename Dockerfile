@@ -1,4 +1,5 @@
-FROM pypy:3.9-slim-bullseye AS base
+FROM pypy:3.9-slim AS base
+#FROM pypy:3.9-slim-bullseye AS base
 
 ENV POETRY_HOME=/etc/poetry
 ENV POETRY_VIRTUALENVS_CREATE=false

@@ -71,6 +71,8 @@ ROUTE_TOKEN_ADDRESSES = env("ROUTE_TOKEN_ADDRESSES",
                             default="").lower().split(",")
 IGNORED_TOKEN_ADDRESSES = env(
     "IGNORED_TOKEN_ADDRESSES", default="").lower().split(",")
+SPECIAL_SYMBOLS = env(
+    "SPECIAL_SYMBOLS", default="").lower().split(",")
 BLUECHIP_TOKEN_ADDRESSES = (
     env("BLUECHIP_TOKEN_ADDRESSES", default="").lower().split(",")
 )
@@ -80,6 +82,10 @@ MULTICHAIN_TOKEN_ADDRESSES = (
 AXELAR_BLUECHIPS_ADDRESSES = (
     env("AXELAR_BLUECHIPS_ADDRESSES", default="").lower().split(",")
 )
+
+USDT_ADDRESS = env(
+    "USDT_ADDRESS", default="").lower().split(",")
+
 # Will be picked automatically by web3.py
 WEB3_PROVIDER_URI = env("WEB3_PROVIDER_URI")
 
@@ -95,7 +101,10 @@ SYNC_WAIT_SECONDS = env.int("SYNC_WAIT_SECONDS", default=0)
 
 CORS_ALLOWED_DOMAINS = env("CORS_ALLOWED_DOMAINS", default=None)
 
+# Get the price from external Source - Defillama
 HALT_API_PRICE_FEEDS = env("HALT_API_PRICE_FEEDS", default=False)
+
+LOG_VERBOSE = env("LOG_VERBOSE", default=0)
 
 # Placeholder for our cache instance (Redis)
 CACHE = None

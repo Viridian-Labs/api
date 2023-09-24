@@ -112,8 +112,89 @@ class Pair(Model):
     def from_chain(cls, address):
         """Fetches pair/pool data from chain."""
         address = address.lower()
+        data = cls._fetch_pair_data_from_chain(address)
+        if not data:
+            return None
+        
+        cls._normalize_data(data)
+        cls._patch_symbol(data)
+        cls._cleanup_old_data(address)
+        
+        pair = cls.create(**data)
+        LOGGER.debug("Fetched %s:(%s) %s.", cls.__name__, pair.symbol, pair.address)
+        
+        pair.syncup_gauge()
+        return pair
+    
+    
+    @classmethod
+    def _fetch_pair_data_from_chain(cls, address):
+        try:
+            pair_multi = cls._prepare_multicall(address)
+            data = pair_multi()
+            LOGGER.debug("Loading %s:(%s) %s.", cls.__name__, data["symbol"], address)
+            data["address"] = address
+            return data
+        except Exception as e:
+            LOGGER.error("Error fetching pair data from chain for address %s: %s", address, e)
+            return None
+        
 
-        pair_multi = Multicall(
+    @classmethod
+    def _normalize_data(cls, data):
+        try:
+            data["total_supply"] = data["total_supply"] / (10 ** data["decimals"])
+        except TypeError:
+            LOGGER.error("Invalid decimals in total_supply normalization: %s", data["decimals"])
+            return  
+        
+        token0 = Token.find(data["token0_address"])
+        token1 = Token.find(data["token1_address"])
+        
+        try:
+            data["reserve0"] = data["reserve0"] / (10 ** int(token0.decimals))
+        except (TypeError, ValueError):
+            LOGGER.error("Invalid decimals in reserve0 normalization: %s", token0.symbol)
+            return  
+        
+        try:
+            data["reserve1"] = data["reserve1"] / (10 ** int(token1.decimals))
+        except (TypeError, ValueError):
+            LOGGER.error("Invalid decimals in reserve1 normalization: %s", token1.decimals)
+            return  
+        
+        data["gauge_address"] = data["gauge_address"].lower() if data.get("gauge_address") not in (ADDRESS_ZERO, None) else None
+        data["tvl"] = cls._tvl(data, token0, token1)
+        data["isStable"] = data["stable"]
+        data["totalSupply"] = data["total_supply"]
+
+
+    @classmethod
+    def _patch_symbol(cls, data):
+        if data["token0_address"] in MULTICHAIN_TOKEN_ADDRESSES:
+            aux_symbol = data["symbol"]
+            data["symbol"] = aux_symbol[:5] + "multi" + aux_symbol[5:]
+        if data["token1_address"] in MULTICHAIN_TOKEN_ADDRESSES:
+            aux_symbol = data["symbol"]
+            slash_index = aux_symbol.find("/") + 1
+            data["symbol"] = aux_symbol[:slash_index] + "multi" + aux_symbol[slash_index:]
+
+    @classmethod
+    def _cleanup_old_data(cls, address):
+        cls.query_delete(cls.address == address.lower())
+        
+
+    @classmethod
+    def _prepare_multicall(cls, address):
+        """
+        Prepares a Multicall object with multiple blockchain method calls.
+        
+        :param address: The address on the blockchain to call methods on.
+        :type address: str
+        :return: A Multicall object with prepared method calls.
+        :rtype: Multicall
+        """
+        return Multicall(
             [
                 Call(
                     address,
@@ -122,8 +203,7 @@ class Pair(Model):
                 ),
                 Call(address, "token0()(address)", [["token0_address", None]]),
                 Call(address, "token1()(address)", [["token1_address", None]]),
-                Call(address, "totalSupply()(uint256)",
-                     [["total_supply", None]]),
+                Call(address, "totalSupply()(uint256)", [["total_supply", None]]),
                 Call(address, "symbol()(string)", [["symbol", None]]),
                 Call(address, "decimals()(uint8)", [["decimals", None]]),
                 Call(address, "stable()(bool)", [["stable", None]]),
@@ -135,53 +215,6 @@ class Pair(Model):
             ]
         )
 
-        data = pair_multi()
-        LOGGER.debug("Loading %s:(%s) %s.",
-                     cls.__name__, data["symbol"], address)
-
-        data["address"] = address
-        data["total_supply"] = data["total_supply"] / (10 ** data["decimals"])
-
-        token0 = Token.find(data["token0_address"])
-        token1 = Token.find(data["token1_address"])
-        # if token0.address in IGNORED_TOKEN_ADDRESSES
-        # or token1.address in IGNORED_TOKEN_ADDRESSES:
-        #     return None
-        data["reserve0"] = data["reserve0"] / (10 ** token0.decimals)
-        data["reserve1"] = data["reserve1"] / (10 ** token1.decimals)
-
-        if data.get("gauge_address") in (ADDRESS_ZERO, None):
-            data["gauge_address"] = None
-        else:
-            data["gauge_address"] = data["gauge_address"].lower()
-
-        data["tvl"] = cls._tvl(data, token0, token1)
-
-        # TODO: Remove once no longer needed...
-        data["isStable"] = data["stable"]
-        data["totalSupply"] = data["total_supply"]
-
-        # Symbol Patch due to multichain issue
-        if data["token0_address"] in MULTICHAIN_TOKEN_ADDRESSES:
-            aux_symbol = data["symbol"]
-            data["symbol"] = aux_symbol[:5] + "multi" + aux_symbol[5:]
-        if data["token1_address"] in MULTICHAIN_TOKEN_ADDRESSES:
-            aux_symbol = data["symbol"]
-            slash_index = aux_symbol.find("/") + 1
-            data["symbol"] = (
-                aux_symbol[:slash_index] + "multi" + aux_symbol[slash_index:]
-            )
-
-        # Cleanup old data...
-        cls.query_delete(cls.address == address.lower())
-
-        pair = cls.create(**data)
-        LOGGER.debug("Fetched %s:(%s) %s.",
-                     cls.__name__, pair.symbol, pair.address)
-
-        pair.syncup_gauge()
-
-        return pair
 
     @classmethod
     def _tvl(cls, pool_data, token0, token1):

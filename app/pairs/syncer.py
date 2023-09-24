@@ -13,10 +13,15 @@ from app.vara import VaraPrice
 
 def sync():
     """Syncs """
-    LOGGER.info("Syncing pairs ...")
     t0 = time.time()
-
+    LOGGER.info("Syncing tokens ...")
+    
     Token.from_tokenlists()
+
+    t00 = time.time() - t0    
+
+    t1 = time.time()
+    LOGGER.info("Syncing pairs ...")
 
     with ThreadPool(4) as pool:
         addresses = Pair.chain_addresses()
@@ -35,7 +40,10 @@ def sync():
     Assets.recache()
     VaraPrice.recache()
 
-    LOGGER.info("Syncing pairs done in %s seconds.", time.time() - t0)
+    LOGGER.info("Syncing tokens done in %s seconds.", t00)
+    LOGGER.info("Syncing pairs done in %s seconds.", time.time() - t1)
+    
+    LOGGER.info("Total Syncing done in %s seconds.", time.time() - t0)
 
     reset_multicall_pool_executor()
 
@@ -59,6 +67,7 @@ def sync_forever():
             sync_proc.close()
             del sync_proc
 
+        exit(0)
         time.sleep(SYNC_WAIT_SECONDS)
 
 
