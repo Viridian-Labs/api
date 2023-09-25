@@ -15,6 +15,7 @@ from app.settings import (
     LOGGER,
     MULTICHAIN_TOKEN_ADDRESSES,
     VOTER_ADDRESS,
+    DEFAULT_DECIMAL
 )
 
 
@@ -142,31 +143,36 @@ class Pair(Model):
 
     @classmethod
     def _normalize_data(cls, data):
+        def normalize_value(value, decimals, error_msg):
+            try:
+                return value / (10 ** decimals)
+            except (TypeError, ValueError):
+                LOGGER.error(error_msg)
+                raise ValueError(error_msg)
+
         try:
-            data["total_supply"] = data["total_supply"] / (10 ** data["decimals"])
-        except TypeError:
-            LOGGER.error("Invalid decimals in total_supply normalization: %s", data["decimals"])
-            return  
-        
-        token0 = Token.find(data["token0_address"])
-        token1 = Token.find(data["token1_address"])
-        
-        try:
-            data["reserve0"] = data["reserve0"] / (10 ** int(token0.decimals))
-        except (TypeError, ValueError):
-            LOGGER.error("Invalid decimals in reserve0 normalization: %s", token0.symbol)
-            return  
-        
-        try:
-            data["reserve1"] = data["reserve1"] / (10 ** int(token1.decimals))
-        except (TypeError, ValueError):
-            LOGGER.error("Invalid decimals in reserve1 normalization: %s", token1.decimals)
-            return  
-        
-        data["gauge_address"] = data["gauge_address"].lower() if data.get("gauge_address") not in (ADDRESS_ZERO, None) else None
-        data["tvl"] = cls._tvl(data, token0, token1)
-        data["isStable"] = data["stable"]
-        data["totalSupply"] = data["total_supply"]
+            decimals = data.get("decimals", 0)
+            data["total_supply"] = normalize_value(data.get("total_supply", 0), decimals, "Invalid decimals in total_supply normalization: %s" % decimals)
+
+            token0 = Token.find(data.get("token0_address"))
+            token1 = Token.find(data.get("token1_address"))
+
+            decimals0 = token0.decimals or int(DEFAULT_DECIMAL)
+            decimals1 = token1.decimals or int(DEFAULT_DECIMAL)
+
+            data["reserve0"] = normalize_value(data.get("reserve0", 0), decimals0, "Invalid decimals in reserve0 normalization: %s" % token0.symbol)
+            data["reserve1"] = normalize_value(data.get("reserve1", 0), decimals1, "Invalid decimals in reserve1 normalization: %s" % token1.symbol)
+
+            gauge_address = data.get("gauge_address")
+            data["gauge_address"] = gauge_address.lower() if gauge_address not in (ADDRESS_ZERO, None) else None
+            data["tvl"] = cls._tvl(data, token0, token1)
+            data["isStable"] = data.get("stable", False)
+            data["totalSupply"] = data.get("total_supply", 0)
+
+        except ValueError:
+            return None  
+
+        return data  
 
 
     @classmethod

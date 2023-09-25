@@ -41,8 +41,7 @@ def sync():
     VaraPrice.recache()
 
     LOGGER.info("Syncing tokens done in %s seconds.", t00)
-    LOGGER.info("Syncing pairs done in %s seconds.", time.time() - t1)
-    
+    LOGGER.info("Syncing pairs done in %s seconds.", time.time() - t1)    
     LOGGER.info("Total Syncing done in %s seconds.", time.time() - t0)
 
     reset_multicall_pool_executor()

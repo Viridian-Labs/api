@@ -23,7 +23,7 @@ class VaraPrice(object):
     def recache(cls):
 
         token = Token.find(DEFAULT_TOKEN_ADDRESS)
-        LOGGER.debug("Token: %s", token)
+        LOGGER.debug("Token: %s", token.symbol)
         LOGGER.debug("VARA price: %s", token.price)
         CACHE.setex(cls.CACHE_KEY, cls.CACHE_TIME, token.price)
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)

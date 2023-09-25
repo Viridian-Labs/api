@@ -86,11 +86,23 @@ AXELAR_BLUECHIPS_ADDRESSES = (
 
 PRICE_FEED_ORDER = env(
     "PRICE_FEED_ORDER", default=[    
-    "chain_price_in_stables",
-    "chain_price_in_bluechips",
-    "chain_price_in_stables_and_default_token",
-    "chain_price_in_liquid_staked"
-  ])
+        "chain_price_in_stables",
+        "chain_price_in_bluechips",
+        "chain_price_in_stables_and_default_token",
+        "chain_price_in_liquid_staked"
+])
+
+
+AGGREGATED_PRICE_ORDER = env(
+    "AGGREGATED_PRICE_ORDER", default=[    
+        "_get_price_from_dexscreener",
+        "chain_price_in_stables",
+        "_get_price_from_defillama",
+        "debank_price_in_stables",
+        "dexguru_price_in_stables"
+])
+
+
 
 # Will be picked automatically by web3.py
 WEB3_PROVIDER_URI = env("WEB3_PROVIDER_URI")
@@ -109,6 +121,10 @@ CORS_ALLOWED_DOMAINS = env("CORS_ALLOWED_DOMAINS", default=None)
 
 # Get the price from external Source - Defillama
 HALT_API_PRICE_FEEDS = env("HALT_API_PRICE_FEEDS", default=False)
+
+DEFAULT_DECIMAL = env("DEFAULT_DECIMAL", default=18)
+
+
 
 LOG_VERBOSE = env("LOG_VERBOSE", default=0)
 

@@ -23,7 +23,8 @@ from app.settings import (
     ROUTER_ADDRESS,
     STABLE_TOKEN_ADDRESS,    
     TOKENLISTS,
-    PRICE_FEED_ORDER
+    PRICE_FEED_ORDER,
+    AGGREGATED_PRICE_ORDER,
 )
 
 
@@ -41,9 +42,33 @@ class Token(Model):
     stable = BooleanField(default=0)    
     liquid_staked_address = TextField()    
     created_at = FloatField(default=w3.eth.get_block("latest").timestamp)
+    
+    DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/tokens/" # See: https://docs.dexscreener.com/#tokens
+    DEFILLAMA_ENDPOINT = "https://coins.llama.fi/prices/current/" # See: https://defillama.com/docs/api#operations-tag-coins
+    DEXGURU_ENDPOINT = 'https://api.dev.dex.guru/v1/chain/10/tokens/%/market' # See: https://api.dev.dex.guru/docs#tag/Token-Finance
 
-    DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/tokens/"
-    DEFILLAMA_ENDPOINT = "https://coins.llama.fi/prices/current/"
+    def debank_price_in_stables(self):
+        """Returns the price quoted from DeBank"""
+        # Peg it forever.
+        if self.address == STABLE_TOKEN_ADDRESS:
+            return 1.0
+
+        req = self.DEBANK_ENDPOINT + 'token_id=' + self.address.lower()
+
+        res = requests.get(req).json()
+        token_data = res.get('data') or {}
+
+        return token_data.get('price') or 0
+
+    def dexguru_price_in_stables(self):
+        """Returns the price quoted from DexGuru"""
+        # Peg it forever.
+        if self.address == STABLE_TOKEN_ADDRESS:
+            return 1.0
+
+        res = requests.get(self.DEXGURU_ENDPOINT % self.address.lower()).json()
+
+        return res.get('price_usd', 0)
 
 
     def defillama_price_in_stables(self) -> float:
@@ -108,16 +133,28 @@ class Token(Model):
             LOGGER.error("Invalid price received: %s", price_str)
             return 0
         
-    
     def aggregated_price_in_stables(self):
-        
-        price = self._get_price_from_dexscreener()
-        if price > 0:
-            return price
+        price_getters_mapping = {
+            "_get_price_from_dexscreener": self._get_price_from_dexscreener,
+            "chain_price_in_stables": self.chain_price_in_stables,
+            "debank_price_in_stables": self.debank_price_in_stables,
+            "_get_price_from_defillama": self._get_price_from_defillama,
+            "dexguru_price_in_stables": self.dexguru_price_in_stables
+        }
 
-        return self._get_price_from_defillama()
+        # Get the environment variable as a string and split it into a list
+        aggregated_price_order = AGGREGATED_PRICE_ORDER
 
+        for func_name in aggregated_price_order:
+            if func_name in price_getters_mapping:
+                func = price_getters_mapping[func_name]  # Corrected line
+                price = func()
+                if price > 0:
+                    self.price = price
+                    return price
 
+        return 0 
+   
     def _get_price_from_dexscreener(self):
         price = self.dexscreener_price_in_stables()
         if price > 0 and self.address not in BLUECHIP_TOKEN_ADDRESSES:
@@ -377,49 +414,43 @@ class Token(Model):
 
     def _update_price(self):
         start_time = time.time()
-
-        # Check if the token is ignored
+        
         if self.symbol in IGNORED_TOKEN_ADDRESSES:
             return self._finalize_update(0, start_time)
 
-        # Check if external sources should be used
         if not HALT_API_PRICE_FEEDS or self.symbol in SPECIAL_SYMBOLS:
             price = self.aggregated_price_in_stables()
             if price > 0:
-                return self._finalize_update(price, start_time)
-
-        # Check token decimals
+                return self._finalize_update(price, start_time)        
+            
         if not self.decimals:
             LOGGER.debug("Token doesn't have any decimals %s", self.symbol)
             return 0
-
+        
         if not isinstance(self.decimals, int):
             LOGGER.error("Invalid value for decimals for token: %s", self.address)
             return 0
 
-        # Define price functions with names
         price_functions = {
-            "Chain price in stables": self.chain_price_in_stables,
-            "Chain price in bluechips": self.chain_price_in_bluechips,
-            "Chain price in stables and default token": self.chain_price_in_stables_and_default_token,
-            "Chain price in liquid staked": self.chain_price_in_liquid_staked,
+            "chain_price_in_stables": self.chain_price_in_stables,
+            "chain_price_in_bluechips": self.chain_price_in_bluechips,
+            "chain_price_in_stables_and_default_token": self.chain_price_in_stables_and_default_token,
+            "chain_price_in_liquid_staked": self.chain_price_in_liquid_staked,
         }
 
-        # Iterate through PRICE_FEED_ORDER and call functions in the specified order
         for func_name in PRICE_FEED_ORDER:
             if func_name in price_functions:
                 func = price_functions[func_name]
                 price = func()
+
                 if price > 0:
                     return self._finalize_update(price, start_time)
 
-        # Check for Axelar bluechips
         if self.address in AXELAR_BLUECHIPS_ADDRESSES:
             price = self.temporary_price_in_bluechips()
             if price > 0:
                 return self._finalize_update(price, start_time)
 
-        # If none of the conditions were met, handle accordingly
         return self._finalize_update(0, start_time)
 
 
