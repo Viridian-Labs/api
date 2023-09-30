@@ -72,20 +72,17 @@ ROUTE_TOKEN_ADDRESSES = env("ROUTE_TOKEN_ADDRESSES",
 IGNORED_TOKEN_ADDRESSES = env(
     "IGNORED_TOKEN_ADDRESSES", default="").lower().split(",")
 
-SPECIAL_SYMBOLS = env(
-    "SPECIAL_SYMBOLS", default="").lower().split(",")
+SPECIAL_TOKENS = env(
+    "SPECIAL_TOKENS", default="").lower().split(",")
 BLUECHIP_TOKEN_ADDRESSES = (
     env("BLUECHIP_TOKEN_ADDRESSES", default="").lower().split(",")
-)
-MULTICHAIN_TOKEN_ADDRESSES = (
-    env("MULTICHAIN_TOKEN_ADDRESSES", default="").lower().split(",")
 )
 AXELAR_BLUECHIPS_ADDRESSES = (
     env("AXELAR_BLUECHIPS_ADDRESSES", default="").lower().split(",")
 )
 
-PRICE_FEED_ORDER = env(
-    "PRICE_FEED_ORDER", default=[    
+INTERNAL_PRICE_ORDER = env(
+    "INTERNAL_PRICE_ORDER", default=[    
         "chain_price_in_stables",
         "chain_price_in_bluechips",
         "chain_price_in_stables_and_default_token",
@@ -93,8 +90,8 @@ PRICE_FEED_ORDER = env(
 ])
 
 
-AGGREGATED_PRICE_ORDER = env(
-    "AGGREGATED_PRICE_ORDER", default=[    
+EXTERNAL_PRICE_ORDER = env(
+    "EXTERNAL_PRICE_ORDER", default=[    
         "_get_price_from_dexscreener",
         "chain_price_in_stables",
         "_get_price_from_defillama",
@@ -120,7 +117,7 @@ SYNC_WAIT_SECONDS = env.int("SYNC_WAIT_SECONDS", default=0)
 CORS_ALLOWED_DOMAINS = env("CORS_ALLOWED_DOMAINS", default=None)
 
 # Get the price from external Source - Defillama
-HALT_API_PRICE_FEEDS = env("HALT_API_PRICE_FEEDS", default=False)
+GET_PRICE_INTERNAL_FIRST = env("GET_PRICE_INTERNAL_FIRST", default=True)
 
 DEFAULT_DECIMAL = env("DEFAULT_DECIMAL", default=18)
 
