@@ -272,9 +272,10 @@ class Token(Model):
                         return amountC / 10**stablecoin.decimals
                 if amountB > 0:
                     return amountB / 10**stablecoin.decimals
-                # Special case for TVestige (calc from wKAVA)
+                # Special case for TVestige and UMBRA (calc from wKAVA)
                 if token_address == nativecoin.address and self.symbol in [
-                    "TV"
+                    "TV",
+                    "UMBRA",
                 ]:
                     amountA = amountA / 10**nativecoin.decimals
                     return amountA * nativecoin.price
