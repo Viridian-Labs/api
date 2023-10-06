@@ -13,7 +13,6 @@ from app.settings import (
     DEFAULT_TOKEN_ADDRESS,
     FACTORY_ADDRESS,
     LOGGER,
-    MULTICHAIN_TOKEN_ADDRESSES,
     VOTER_ADDRESS,
     DEFAULT_DECIMAL
 )
@@ -117,8 +116,7 @@ class Pair(Model):
         if not data:
             return None
         
-        cls._normalize_data(data)
-        cls._patch_symbol(data)
+        cls._normalize_data(data)        
         cls._cleanup_old_data(address)
         
         pair = cls.create(**data)
@@ -175,15 +173,8 @@ class Pair(Model):
         return data  
 
 
-    @classmethod
-    def _patch_symbol(cls, data):
-        if data["token0_address"] in MULTICHAIN_TOKEN_ADDRESSES:
-            aux_symbol = data["symbol"]
-            data["symbol"] = aux_symbol[:5] + "multi" + aux_symbol[5:]
-        if data["token1_address"] in MULTICHAIN_TOKEN_ADDRESSES:
-            aux_symbol = data["symbol"]
-            slash_index = aux_symbol.find("/") + 1
-            data["symbol"] = aux_symbol[:slash_index] + "multi" + aux_symbol[slash_index:]
+    
+        
 
     @classmethod
     def _cleanup_old_data(cls, address):

@@ -83,20 +83,19 @@ AXELAR_BLUECHIPS_ADDRESSES = (
 
 INTERNAL_PRICE_ORDER = env(
     "INTERNAL_PRICE_ORDER", default=[    
-        "chain_price_in_stables",
-        "chain_price_in_bluechips",
-        "chain_price_in_stables_and_default_token",
-        "chain_price_in_liquid_staked"
+        "direct",
+        "axelar_bluechips",
+        "bluechip_tokens",
+        "native_token"
 ])
 
 
 EXTERNAL_PRICE_ORDER = env(
     "EXTERNAL_PRICE_ORDER", default=[    
         "_get_price_from_dexscreener",
-        "chain_price_in_stables",
+        "_get_price_from_debank",
         "_get_price_from_defillama",
-        "debank_price_in_stables",
-        "dexguru_price_in_stables"
+        "_get_price_from_dexguru"
 ])
 
 
