@@ -10,13 +10,13 @@ from app.assets import Token
 from app.gauges import Gauge
 from app.settings import (
     CACHE,
-    DEFAULT_TOKEN_ADDRESS,
     FACTORY_ADDRESS,
     LOGGER,
     VOTER_ADDRESS,
     DEFAULT_DECIMAL
 )
 
+PAIRLISTS_CACHE_KEY = "pairs:chain_addresses"
 
 class Pair(Model):
     """Liquidity pool pairs model."""
@@ -59,11 +59,11 @@ class Pair(Model):
     def syncup_gauge(self):
         """Fetches own gauges data from chain."""
         if self.gauge_address in (ADDRESS_ZERO, None):
-            return        
+            return None       
 
         if self.tvl == 0:
             LOGGER.warning("TVL is zero. Skipping APR update.")                  
-            return gauge 
+            return None 
 
         gauge = Gauge.from_chain(self.gauge_address)    
 
@@ -140,14 +140,21 @@ class Pair(Model):
                 return value / (10 ** decimals)
             except (TypeError, ValueError):
                 LOGGER.error(error_msg)
-                raise ValueError(error_msg)
+                return None
 
         try:
             decimals = data.get("decimals", 0)
             data["total_supply"] = normalize_value(data.get("total_supply", 0), decimals, "Invalid decimals in total_supply normalization: %s" % decimals)
 
             token0 = Token.find(data.get("token0_address"))
+            if not token0:
+                LOGGER.warning("Token not found for address: %s", data.get("token0_address"))
+                return None
+
             token1 = Token.find(data.get("token1_address"))
+            if not token1:
+                LOGGER.warning("Token not found for address: %s", data.get("token1_address"))
+                return None
 
             decimals0 = token0.decimals or int(DEFAULT_DECIMAL)
             decimals1 = token1.decimals or int(DEFAULT_DECIMAL)
@@ -161,10 +168,12 @@ class Pair(Model):
             data["isStable"] = data.get("stable", False)
             data["totalSupply"] = data.get("total_supply", 0)
 
-        except ValueError:
-            return None  
+        except Exception as e:
+            LOGGER.error("Error in _normalize_data: %s", str(e))
+            return None
 
-        return data  
+        return data
+
 
 
     
@@ -213,25 +222,9 @@ class Pair(Model):
         tvl = 0
 
         if token0.price and token0.price != 0:
-            # LOGGER.debug(
-            #     "Pool %s:(%s) has a price of %s
-            # for token0. And a reserve of %s.",
-            #     cls.__name__,
-            #     pool_data["symbol"],
-            #     token0.price,
-            #     pool_data["reserve0"],
-            # )
             tvl += pool_data["reserve0"] * token0.price
 
         if token1.price and token1.price != 0:
-            # LOGGER.debug(
-            #     "Pool %s:(%s) has a price of %s
-            # for token1. And a reserve of %s.",
-            #     cls.__name__,
-            #     pool_data["symbol"],
-            #     token1.price,
-            #     pool_data["reserve1"],
-            # )
             tvl += pool_data["reserve1"] * token1.price
 
         if tvl != 0 and (token0.price == 0 or token1.price == 0):
@@ -241,8 +234,11 @@ class Pair(Model):
                 pool_data["symbol"],
             )
             tvl = tvl * 2
+
         LOGGER.debug(
             "Pool %s:(%s) has a TVL of %s.",
             cls.__name__, pool_data["symbol"], tvl
         )
+
         return tvl
+

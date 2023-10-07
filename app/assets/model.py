@@ -29,6 +29,7 @@ DEFILLAMA_ENDPOINT = "https://coins.llama.fi/prices/current/"
 DEXGURU_ENDPOINT = 'https://api.dev.dex.guru/v1/chain/10/tokens/%/market'
 DEBANK_ENDPOINT = 'https://api.debank.com/history/token_price?chain=op&'
 
+
 class Token(Model):
 
     """
@@ -179,45 +180,25 @@ class Token(Model):
         except ContractLogicError:
             LOGGER.debug("Found error getting chain price for %s", self.symbol)
             return 0
-
-    @staticmethod
-    def _get_token_details_from_chain(address):
-        """Fetches and returns a token from chain."""
-        token_multi = Multicall(
-            [
-                Call(address, ["name()(string)"], [["name", None]]),
-                Call(address, ["symbol()(string)"], [["symbol", None]]),
-                Call(address, ["decimals()(uint8)"], [["decimals", None]]),
-                ]
-        )
-
-        data = token_multi()
-        return data
-
+        
 
     def _get_price_through_tokens(self, token_addresses, stablecoin):
-        if self.decimals is None or not isinstance(self.decimals, int):
+        if not isinstance(self.decimals, int):
             self.decimals = DEFAULT_DECIMAL
 
         if not isinstance(token_addresses, list):
             LOGGER.error("Invalid token_addresses type. Expected list.")
             return 0
 
-        prices = 0
-        
+        total_price = 0
+
         for token_address in token_addresses:
-
-            if not token_address:
-                continue
-
-            #LOGGER.debug("Checking token address %s", token_address )
-
-            if not token_address.startswith("0x") or len(token_address) != 42:
+            if not token_address or not token_address.startswith("0x") or len(token_address) != 42:
                 LOGGER.error(f"Invalid Ethereum address: {token_address}")
                 continue
 
             try:
-                callA = Call(
+                resultA = Call(
                     ROUTER_ADDRESS,
                     [
                         "getAmountOut(uint256,address,address)(uint256,bool)",
@@ -225,16 +206,15 @@ class Token(Model):
                         self.address,
                         token_address,
                     ]
-                )
-                resultA = callA()  
+                )()
 
                 if not isinstance(resultA, tuple):
                     LOGGER.error(f"Unexpected result type for {token_address} in first call. Expected tuple but got {type(resultA)}")
                     continue
 
-                amountA, is_stable = resultA
+                amountA, _ = resultA
 
-                callB = Call(
+                resultB = Call(
                     ROUTER_ADDRESS,
                     [
                         "getAmountOut(uint256,address,address)(uint256,bool)",
@@ -242,27 +222,23 @@ class Token(Model):
                         token_address,
                         stablecoin.address,
                     ],
-                )
-                resultB = callB()  
+                )()
 
                 if not isinstance(resultB, tuple):
                     LOGGER.error(f"Unexpected result type for {token_address} in second call. Expected tuple but got {type(resultB)}")
                     continue
 
-                amountB, is_stable = resultB
+                amountB, _ = resultB
+
                 if isinstance(amountB, int) and amountB > 0:
-                    prices = amountB / 10 ** stablecoin.decimals
-                else:
-                    prices = 0
+                    total_price += amountB / 10 ** stablecoin.decimals
 
             except ContractLogicError:
                 LOGGER.error(f"Contract logic error for token address: {token_address}")
-                continue
             except Exception as e:
                 LOGGER.error(f"Error getting amount out for {token_address}: {e}")
-                continue
 
-        return prices
+        return total_price
 
 
 
@@ -303,6 +279,7 @@ class Token(Model):
                 return self._finalize_update(price, start_time)
 
         return self._finalize_update(0, start_time)
+
 
     def _get_price_from_dexscreener(self):
         try:
@@ -384,18 +361,28 @@ class Token(Model):
 
     @classmethod
     def find(cls, address):
-
         if not address:
             LOGGER.error("Address is None. Unable to fetch %s.", cls.__name__)
             return None
 
-        token = cls.load(address.lower())
+        try:
+            token = cls.load(address.lower())
+        except KeyError:
+            token = None
+
         if not token:
             LOGGER.error("Token not found in database for address: %s. Fetching from chain...", address)
-            token_data = cls._fetch_data_from_chain(address.lower())
-            if token_data:
-                token = cls.create(**token_data)
+
+            try:
+                token_data = cls._fetch_data_from_chain(address.lower())
+
+                if token_data:
+                    token = cls.create(**token_data)
+            except:
+                token = None
+                        
         return token
+
 
 
     @staticmethod
@@ -416,13 +403,33 @@ class Token(Model):
         except Exception as e:
             LOGGER.error(f"Error fetching data from chain for address {address}: {e}")
             return {}
+        
+    def to_dict(self):
+        """Converts the Token object to a dictionary."""
+        return {
+            "address": self.address,
+            "name": self.name,
+            "symbol": self.symbol,
+            "decimals": self.decimals,
+            "logoURI": self.logoURI,
+            "price": self.price,
+            "stable": self.stable,
+            "liquid_staked_address": self.liquid_staked_address,
+            "created_at": self.created_at,
+            "taxes": self.taxes
+        }
+    
     
     @classmethod
     def from_tokenlists(cls):
         """Fetches and merges all the tokens from available tokenlists."""
+                       
         our_chain_id = w3.eth.chain_id
         all_tokens = cls._fetch_all_tokens(our_chain_id)
+        #all_tokens_dicts = [token.to_dict() for token in all_tokens]
+
         return all_tokens
+
     
 
     @classmethod
@@ -471,6 +478,7 @@ class Token(Model):
         token.stable = 1 if "stablecoin" in tags[0] else 0
         token._update_price()
         return token
+
 
 
 

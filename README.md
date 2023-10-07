@@ -81,3 +81,33 @@ This strategy ensures the reliability and accuracy of token prices by systematic
    - Lists the addresses of tokens to be excluded during price fetching.
    - Useful for omitting unreliable or irrelevant tokens.
 
+
+### **Cache Strategy Overview**
+
+Our application employs a caching mechanism to optimize performance by reducing frequent data fetches. This brief overview explains the caching strategy and its configurable parameters. This caching strategy ensures efficient data access and a seamless user experience.
+
+---
+
+#### **Synchronization Mechanism**
+
+The application periodically syncs data points like tokens, pairs, and VARA prices. During synchronization:
+
+1. **Tokens**: Checks cache validity (`assets:json`). If expired, fetches and updates the token list.
+2. **Pairs**: Checks cache validity (`pairs:json`). If expired, fetches and updates the pairs data using potential multi-threading.
+3. **VARA Price**: Checks cache validity (`vara:json`). If expired, fetches and updates the VARA price.
+
+The `sync` function orchestrates the synchronization, while `sync_forever` ensures continuous synchronization at intervals set by `SYNC_WAIT_SECONDS`.
+
+---
+
+#### **Configurable Cache Expiration**
+
+Cache expiration times determine data validity duration in the cache. These can be set via:
+
+- **TOKEN_CACHE_EXPIRATION**: Token data validity (default: 120 seconds).
+- **PAIR_CACHE_EXPIRATION**: Pairs data validity (default: 1 hour).
+- **VARA_CACHE_EXPIRATION**: VARA price validity (default: 1 hour).
+
+Adjust these configurations in the `.env` file to balance between data freshness and performance.
+
+---

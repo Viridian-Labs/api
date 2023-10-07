@@ -4,7 +4,7 @@ import json
 
 import falcon
 
-from app.settings import CACHE, LOGGER
+from app.settings import CACHE, LOGGER, TOKEN_CACHE_EXPIRATION
 
 from .model import Token
 
@@ -20,6 +20,8 @@ class Assets(object):
         assets = json.dumps(dict(data=tokens))
 
         CACHE.set(cls.CACHE_KEY, assets)
+        CACHE.expire(cls.CACHE_KEY, TOKEN_CACHE_EXPIRATION)
+
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)
         return assets
 
