@@ -6,6 +6,7 @@ from multicall import Call, Multicall
 from walrus import Model, TextField, IntegerField, FloatField, BooleanField
 from web3.auto import w3
 from web3.exceptions import ContractLogicError
+from typing import List, Dict, Union, Optional
 
 from app.settings import (
     STABLE_TOKEN_ADDRESS,
@@ -19,7 +20,8 @@ from app.settings import (
     AXELAR_BLUECHIPS_ADDRESSES,
     BLUECHIP_TOKEN_ADDRESSES,
     NATIVE_TOKEN_ADDRESS,
-    TOKENLISTS
+    TOKENLISTS,
+    DEFAULT_DECIMAL
 )
 
 DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/tokens/"
@@ -57,7 +59,8 @@ class Token(Model):
     stable = BooleanField(default=0)
     liquid_staked_address = TextField()
     created_at = FloatField(default=w3.eth.get_block("latest").timestamp)
-    taxes = FloatField(default=0)   
+    taxes = FloatField(default=0)       
+    
 
     DEXSCREENER_ENDPOINT = DEXSCREENER_ENDPOINT
     DEFILLAMA_ENDPOINT = DEFILLAMA_ENDPOINT
@@ -113,7 +116,11 @@ class Token(Model):
         """
 
         stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
-        
+
+        if not stablecoin:
+            LOGGER.error('No stable coin found')
+            return 0
+                
         price_getters_mapping = {
             "direct": lambda: self._get_direct_price(stablecoin),
             "axelar_bluechips": lambda: self._get_price_through_tokens(AXELAR_BLUECHIPS_ADDRESSES, stablecoin),
@@ -123,8 +130,10 @@ class Token(Model):
         
         for route_type in INTERNAL_PRICE_ORDER:
             if route_type in price_getters_mapping:
-                try:
+                try:                    
+
                     price = price_getters_mapping[route_type]()
+
                     if price > 0:
                         self.price = price
                         return price
@@ -137,7 +146,6 @@ class Token(Model):
 
 
     def _get_direct_price(self, stablecoin):
-
         """
         Fetches the direct price of the token in terms of the provided stablecoin.
         
@@ -150,6 +158,12 @@ class Token(Model):
         Raises:
             ContractLogicError: If there is an error in getting the chain price for the token.
         """
+        
+        # Ensure the decimals attributes are not None and are integers
+        if self.decimals is None or not isinstance(self.decimals, int):
+            self.decimals = DEFAULT_DECIMAL
+        if stablecoin.decimals is None or not isinstance(stablecoin.decimals, int):
+            stablecoin.decimals = DEFAULT_DECIMAL
 
         try:
             amount, is_stable = Call(
@@ -166,60 +180,61 @@ class Token(Model):
             LOGGER.debug("Found error getting chain price for %s", self.symbol)
             return 0
 
+    @staticmethod
+    def _get_token_details_from_chain(address):
+        """Fetches and returns a token from chain."""
+        token_multi = Multicall(
+            [
+                Call(address, ["name()(string)"], [["name", None]]),
+                Call(address, ["symbol()(string)"], [["symbol", None]]),
+                Call(address, ["decimals()(uint8)"], [["decimals", None]]),
+                ]
+        )
+
+        data = token_multi()
+        return data
+
 
     def _get_price_through_tokens(self, token_addresses, stablecoin):
+        if self.decimals is None or not isinstance(self.decimals, int):
+            self.decimals = DEFAULT_DECIMAL
 
-        """
-        Fetches the price of the token through a list of intermediary tokens in terms of the provided stablecoin.
-        
-        Parameters:
-            token_addresses (List[str]): A list of addresses of the intermediary tokens.
-            stablecoin (Token): The stablecoin against which the price of the token is to be fetched.
-            
-        Returns:
-            float: The fetched price of the token, 0 if fetching fails or no valid calls.
-            
-        Raises:
-            Exception: Any exception raised during the execution of multicall or getting amount out.
-        """
-        
-        if not token_addresses or not isinstance(token_addresses, list):
-            LOGGER.error("Invalid token_addresses")
+        if not isinstance(token_addresses, list):
+            LOGGER.error("Invalid token_addresses type. Expected list.")
             return 0
+
+        prices = 0
         
-        calls = []
         for token_address in token_addresses:
-            token = Token.find(token_address)
-            if not token:
-                LOGGER.error(f"Token not found for address: {token_address}")
+
+            if not token_address:
                 continue
-            
-            calls.append(
-                Call(
+
+            #LOGGER.debug("Checking token address %s", token_address )
+
+            if not token_address.startswith("0x") or len(token_address) != 42:
+                LOGGER.error(f"Invalid Ethereum address: {token_address}")
+                continue
+
+            try:
+                callA = Call(
                     ROUTER_ADDRESS,
                     [
                         "getAmountOut(uint256,address,address)(uint256,bool)",
                         1 * 10 ** self.decimals,
                         self.address,
                         token_address,
-                    ],
+                    ]
                 )
-            )
-        
-        if not calls:
-            LOGGER.error("No valid calls")
-            return 0
-        
-        try:
-            results = Multicall(calls)()
-        except Exception as e:
-            LOGGER.error(f"Error executing multicall: {e}")
-            return 0
-        
-        for i, token_address in enumerate(token_addresses):
-            try:
-                amountA, is_stable = results[i]
-                amountB, is_stable = Call(
+                resultA = callA()  
+
+                if not isinstance(resultA, tuple):
+                    LOGGER.error(f"Unexpected result type for {token_address} in first call. Expected tuple but got {type(resultA)}")
+                    continue
+
+                amountA, is_stable = resultA
+
+                callB = Call(
                     ROUTER_ADDRESS,
                     [
                         "getAmountOut(uint256,address,address)(uint256,bool)",
@@ -227,21 +242,31 @@ class Token(Model):
                         token_address,
                         stablecoin.address,
                     ],
-                )()
-                if amountB > 0:
-                    return amountB / 10 ** stablecoin.decimals
+                )
+                resultB = callB()  
+
+                if not isinstance(resultB, tuple):
+                    LOGGER.error(f"Unexpected result type for {token_address} in second call. Expected tuple but got {type(resultB)}")
+                    continue
+
+                amountB, is_stable = resultB
+                if isinstance(amountB, int) and amountB > 0:
+                    prices = amountB / 10 ** stablecoin.decimals
+                else:
+                    prices = 0
+
             except ContractLogicError:
                 LOGGER.error(f"Contract logic error for token address: {token_address}")
                 continue
             except Exception as e:
-                LOGGER.error(f"Error getting amount out: {e}")
+                LOGGER.error(f"Error getting amount out for {token_address}: {e}")
                 continue
-        
-        return 0
+
+        return prices
+
 
 
     def _update_price(self):
-            
         """
         Updates the price of the token by fetching it from the defined internal and external sources.
         The order of fetching and the sources are defined in GET_PRICE_INTERNAL_FIRST, 
@@ -256,53 +281,75 @@ class Token(Model):
         
         start_time = time.time()
 
-        if self.symbol in IGNORED_TOKEN_ADDRESSES or not isinstance(self.decimals, int):
+        if self.decimals is None or not isinstance(self.decimals, int):
+            self.decimals = DEFAULT_DECIMAL
+
+        if self.symbol in IGNORED_TOKEN_ADDRESSES:
             LOGGER.error("Invalid token or decimals for token: %s", self.address)
             return self._finalize_update(0, start_time)
 
         price_fetching_functions = [
-            self.get_price_internal_source,
-            self.get_price_external_source
+            (self.get_price_internal_source, "Internal Source"),
+            (self.get_price_external_source, "External Source")
         ] if GET_PRICE_INTERNAL_FIRST else [
-            self.get_price_external_source,
-            self.get_price_internal_source
+            (self.get_price_external_source, "External Source"),
+            (self.get_price_internal_source, "Internal Source")
         ]
 
-        for get_price in price_fetching_functions:
+        for get_price, method_name in price_fetching_functions:
             price = get_price()
             if price > 0:
+                LOGGER.info("Price for %s fetched using %s", self.symbol, method_name)
                 return self._finalize_update(price, start_time)
 
         return self._finalize_update(0, start_time)
-    
 
     def _get_price_from_dexscreener(self):
         try:
             res = requests.get(self.DEXSCREENER_ENDPOINT + self.address)
             res.raise_for_status()
             data = res.json()
-            price_str = str(data.get("pairs", [{}])[0].get("priceUsd", 0)).replace(",", "")
-            return float(price_str)
-        except (requests.RequestException, ValueError) as e:
+                        
+            pairs = data.get("pairs")
+            if pairs is None or not isinstance(pairs, list) or len(pairs) == 0:
+                #LOGGER.warning("Unexpected structure in Dexscreener response: 'pairs' key missing, None, or not a non-empty list.")
+                #LOGGER.debug(f"Dexscreener API Response: {data}")  # Log the actual response for debugging
+                return 0
+            
+            price_data = pairs[0]
+            if price_data:
+                price_str = str(price_data.get("priceUsd", 0)).replace(",", "")
+                return float(price_str)
+            return 0
+        except (requests.RequestException, ValueError, IndexError) as e:
             LOGGER.error("Error fetching price from Dexscreener: %s", e)
             return 0
 
 
-    def _get_price_from_defillama(self):
+    def _get_price_from_defillama(self) -> float:
+        url = self.DEFILLAMA_ENDPOINT + "kava:" + self.address.lower()
         try:
-            res = requests.get(self.DEFILLAMA_ENDPOINT + "kava:" + self.address.lower())
+            res = requests.get(url)
             res.raise_for_status()
             data = res.json()
-            coins = data.get("coins", {})
+
+            if "coins" not in data or not isinstance(data["coins"], dict):
+                LOGGER.error(f"Unexpected structure in DefiLlama response for token {self.address}: 'coins' key missing or not a dictionary.")
+                return 0
+
+            coins = data["coins"]
             for _, coin in coins.items():
                 price = coin.get("price", 0)
                 if price:
                     return price
-        except (requests.RequestException, ValueError) as e:
-            LOGGER.error("Error fetching price from DefiLlama: %s", e)
+
+            LOGGER.error(f"No price found for token: {self.address}")
             return 0
-        LOGGER.error("No price found for token: %s", self.address)
-        return 0
+
+        except (requests.RequestException, ValueError) as e:
+            LOGGER.error(f"Error fetching price from DefiLlama for token {self.address} using URL {url}: {e}")
+            return 0
+
 
 
     def _get_price_from_debank(self):
@@ -337,41 +384,39 @@ class Token(Model):
 
     @classmethod
     def find(cls, address):
-        """Loads a token from the database, or from chain if not found."""
+
         if not address:
             LOGGER.error("Address is None. Unable to fetch %s.", cls.__name__)
             return None
 
-        try:
-            return cls.load(address.lower())
-        except KeyError:
-            LOGGER.error("Error fetching %s:%s from database. Fetching from chain...", cls.__name__, address)
-            return cls.from_chain(address.lower())    
-
-
-    @classmethod
-    def from_chain(cls, address, logoURI=None):
-        """Fetches and returns a token from chain."""
-        address = address.lower()
-        data = cls._fetch_data_from_chain(address)
-        token = cls.create(address=address, **data)
-        token._update_price()
+        token = cls.load(address.lower())
+        if not token:
+            LOGGER.error("Token not found in database for address: %s. Fetching from chain...", address)
+            token_data = cls._fetch_data_from_chain(address.lower())
+            if token_data:
+                token = cls.create(**token_data)
         return token
 
 
     @staticmethod
     def _fetch_data_from_chain(address):
-        """Fetches token data from the chain."""
-        token_multi = Multicall(
-            [
-                Call(address, ["name()(string)"], [["name", None]]),
-                Call(address, ["symbol()(string)"], [["symbol", None]]),
-                Call(address, ["decimals()(uint8)"], [["decimals", None]]),
-            ]
-        )
-        return token_multi()
-
-
+        try:
+            token_multi = Multicall(
+                [
+                    Call(address, ["name()(string)"], [["name", None]]),
+                    Call(address, ["symbol()(string)"], [["symbol", None]]),
+                    Call(address, ["decimals()(uint8)"], [["decimals", None]]),
+                ]
+            )
+            result = token_multi()
+            if isinstance(result, tuple):
+                LOGGER.error(f"Unexpected tuple result from multicall for address {address}: {result}")
+                return {}
+            return result
+        except Exception as e:
+            LOGGER.error(f"Error fetching data from chain for address {address}: {e}")
+            return {}
+    
     @classmethod
     def from_tokenlists(cls):
         """Fetches and merges all the tokens from available tokenlists."""
@@ -410,14 +455,13 @@ class Token(Model):
 
 
     @staticmethod
-    def _is_valid_token(token_data, our_chain_id):
+    def _is_valid_token(token_data: Dict[str, Union[str, int]], our_chain_id: int) -> bool:
         """Validates if the token is from the correct chain and not in the ignored list."""
         address = token_data.get("address", "").lower()
         return token_data.get("chainId") == our_chain_id and address not in IGNORED_TOKEN_ADDRESSES and address
 
-
     @classmethod
-    def _create_and_update_token(cls, token_data):
+    def _create_and_update_token(cls, token_data: Dict[str, Union[str, int]]) -> 'Token':
         """Creates and updates the token."""
         address = token_data.get("address", "").lower()
         liquid_staked_address = token_data.get("liquid_staked_address", "").lower()
@@ -427,5 +471,7 @@ class Token(Model):
         token.stable = 1 if "stablecoin" in tags[0] else 0
         token._update_price()
         return token
+
+
 
 

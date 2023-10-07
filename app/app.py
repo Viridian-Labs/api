@@ -44,12 +44,7 @@ app.add_route("/api/v1/supply", Supply())
 app.add_route("/api/v1/circulating-supply", CirculatingSupply())
 app.add_route("/api/v1/vara-price", VaraPrice())
 
-# TODO: Remove when no longer needed for backward-compat...
-# app.add_route("/api/v1/baseAssets", Assets())
-# app.add_route("/api/v1/routeAssets", Configuration())
-# app.add_route("/api/v1/updatePairs", Pairs()) 
 
-# Wrap the app in a WSGI logger to make it more verbose...
 wsgi = WSGILogger(app, [StreamHandler(sys.stdout)], ApacheFormatter())
 
 

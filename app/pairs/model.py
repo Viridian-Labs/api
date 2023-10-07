@@ -45,8 +45,8 @@ class Pair(Model):
 
         Uses: https://blog.alphaventuredao.io/fair-lp-token-pricing/
         """
-        token0_price = Token.find(self.token0).chain_price_in_stables()
-        token1_price = Token.find(self.token1).chain_price_in_stables()
+        token0_price = Token.find(self.token0)
+        token1_price = Token.find(self.token1)
 
         if token0_price == 0 or token1_price == 0:
             return 0
@@ -59,25 +59,19 @@ class Pair(Model):
     def syncup_gauge(self):
         """Fetches own gauges data from chain."""
         if self.gauge_address in (ADDRESS_ZERO, None):
-            return
+            return        
 
-        gauge = Gauge.from_chain(self.gauge_address)
-        self._update_apr(gauge)
-
-        return gauge
-
-    def _update_apr(self, gauge):
-        """Calculates the pool TVL"""
         if self.tvl == 0:
-            return
+            LOGGER.warning("TVL is zero. Skipping APR update.")                  
+            return gauge 
 
-        token = Token.find(DEFAULT_TOKEN_ADDRESS)
-        token_price = token.chain_price_in_stables()
+        gauge = Gauge.from_chain(self.gauge_address)    
 
-        daily_apr = (gauge.reward * token_price) / self.tvl * 100
-
-        self.apr = daily_apr * 365
-        self.save()
+        if not gauge or not hasattr(gauge, 'reward') or gauge.reward is None:
+            LOGGER.error("Failed to update APR: Gauge or its reward attribute is missing.")
+            return gauge
+        
+        return gauge    
 
     @classmethod
     def find(cls, address):

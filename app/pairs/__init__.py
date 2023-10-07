@@ -31,18 +31,19 @@ class Pairs(object):
 
             if pair.gauge_address:
                 gauge = Gauge.find(pair.gauge_address)
-                data["gauge"] = gauge._data
-                data["gauge"]["bribes"] = []
+                if gauge:  
+                    data["gauge"] = gauge._data
+                    data["gauge"]["bribes"] = []
 
-                for (token_addr, reward_ammount) in gauge.rewards:
-                    data["gauge"]["bribes"].append(
-                        dict(
-                            token=Token.find(token_addr)._data,
-                            reward_ammount=float(reward_ammount),
-                            # TODO: Backwards compat...
-                            rewardAmmount=float(reward_ammount),
+                    for (token_addr, reward_ammount) in gauge.rewards:
+                        data["gauge"]["bribes"].append(
+                            dict(
+                                token=Token.find(token_addr)._data,
+                                reward_ammount=float(reward_ammount),
+                                # TODO: Backwards compat...
+                                rewardAmmount=float(reward_ammount),
+                            )
                         )
-                    )
 
             pairs.append(data)
 

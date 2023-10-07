@@ -17,6 +17,9 @@ from walrus import Database
 # Use a threaded executor...
 multicall_utils.process_pool_executor = ThreadPoolExecutor()
 
+# Cache expiration times in seconds
+
+
 
 env = Env()
 if os.path.exists(".env"):
@@ -123,6 +126,9 @@ DEFAULT_DECIMAL = env("DEFAULT_DECIMAL", default=18)
 
 
 LOG_VERBOSE = env("LOG_VERBOSE", default=0)
+
+TOKEN_CACHE_EXPIRATION = env.int("TOKEN_CACHE_EXPIRATION", default=3600)  # Default to 1 hour
+PAIR_CACHE_EXPIRATION = env.int("PAIR_CACHE_EXPIRATION", default=7200)  # Default to 2 hours
 
 # Placeholder for our cache instance (Redis)
 CACHE = None

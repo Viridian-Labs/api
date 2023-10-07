@@ -67,13 +67,16 @@ class Gauge(Model):
                 Call(VOTER_ADDRESS, ["isAlive(address)(bool)", address], [["isAlive", None]])
             ])()
 
+            if not data.get("isAlive"):
+                LOGGER.warning(f"Gauge {address} is not Alive. Skipping processing.")
+                return None
+
             data["decimals"] = cls.DEFAULT_DECIMALS
             data["total_supply"] = data["total_supply"] / data["decimals"]
 
             token = cls._validate_token_decimals(Token.find(DEFAULT_TOKEN_ADDRESS))
             data["reward"] = data["reward_rate"] / 10 ** token.decimals * cls.DAY_IN_SECONDS
 
-            # Backwards compatibility
             data["bribeAddress"] = data["bribe_address"]
             data["feesAddress"] = data["fees_address"]
             data["totalSupply"] = data["total_supply"]
@@ -84,7 +87,6 @@ class Gauge(Model):
             if data.get("wrapped_bribe_address") in (ADDRESS_ZERO, ""):
                 del data["wrapped_bribe_address"]
 
-            # Cleanup old data
             cls.query_delete(cls.address == address.lower())
 
             gauge = cls.create(address=address, **data)
