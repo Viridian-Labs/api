@@ -252,8 +252,9 @@ class Token(Model):
 
                 if not isinstance(resultB, tuple):
                     LOGGER.error(
-                        f"Unexpected result type for {token_address} in second \
-                            call. Expected tuple but got {type(resultB)}"
+                        f"Unexpected result type for {token_address} in \
+                            second call. Expected tuple but got \
+                                {type(resultB)}"
                     )
                     continue
 
@@ -369,8 +370,8 @@ class Token(Model):
 
         except (requests.RequestException, ValueError) as e:
             LOGGER.error(
-                f"Error fetching price from DefiLlama for token {self.address} \
-                    using URL {url}: {e}"
+                f"Error fetching price from DefiLlama for token \
+                    {self.address} using URL {url}: {e}"
             )
             return 0
 
