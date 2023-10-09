@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import time
-import json
 from multiprocessing import Process
 from multiprocessing.pool import ThreadPool
 
@@ -21,8 +20,8 @@ def is_cache_expired(key):
 
 def sync_tokens():
     """Syncs tokens and updates cache if needed."""
-    cached_tokens_str = CACHE.get('assets:json')
-    if cached_tokens_str and not is_cache_expired('assets:json'):
+    cached_tokens_str = CACHE.get("assets:json")
+    if cached_tokens_str and not is_cache_expired("assets:json"):
         LOGGER.debug("Using cached Token List.")
     else:
         LOGGER.debug("Updating Token List data...")
@@ -32,27 +31,30 @@ def sync_tokens():
 
 def sync_pairs():
     """Syncs pairs and updates cache if needed."""
-    cached_pairs_str = CACHE.get('pairs:json')
-    if cached_pairs_str and not is_cache_expired('pairs:json'):
+    cached_pairs_str = CACHE.get("pairs:json")
+    if cached_pairs_str and not is_cache_expired("pairs:json"):
         LOGGER.debug("Using cached Pairs.")
     else:
         LOGGER.debug("Updating Pairs data...")
         addresses = Pair.chain_addresses()
         with ThreadPool(4) as pool:
-            LOGGER.debug("Syncing %s pairs using %s threads...", len(addresses), pool._processes)
+            LOGGER.debug(
+                "Syncing %s pairs using %s threads...",
+                len(addresses),
+                pool._processes,
+            )
             pool.map(Pair.from_chain, addresses)
         Pairs.recache()
 
 
 def sync_vara():
     """Syncs tokens and updates cache if needed."""
-    cached_vara_str = CACHE.get('vara:json')
-    if cached_vara_str and not is_cache_expired('vara:json'):
+    cached_vara_str = CACHE.get("vara:json")
+    if cached_vara_str and not is_cache_expired("vara:json"):
         LOGGER.debug("Using cached VARA price")
     else:
-        LOGGER.debug("Updating VARA price...")        
+        LOGGER.debug("Updating VARA price...")
         VaraPrice.recache()
-
 
 
 def sync():
@@ -72,7 +74,6 @@ def sync():
     t2 = time.time()
     sync_vara()
     t_vara = time.time() - t2
-
 
     LOGGER.info("Syncing tokens done in %s seconds.", t_tokens)
     LOGGER.info("Syncing pairs done in %s seconds.", t_pairs)
