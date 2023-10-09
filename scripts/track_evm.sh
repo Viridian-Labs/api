@@ -14,8 +14,8 @@ echo "Script started at: $(date)" | tee -a $DEBUG_LOG
 # Start tcpdump to monitor connections to the IPs
 for IP in $IPS; do
     if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "Monitoring connections to IP: $IP" | tee -a $DEBUG_LOG
-        sudo tcpdump -i any port 8545 or port 8546 -w "logs/outputfile_${IP}_$(date +%Y%m%d).pcap" &
+        echo "Monitoring connections to and from IP: $IP" | tee -a $DEBUG_LOG
+        sudo tcpdump -i any host $IP -w "logs/outputfile_${IP}_$(date +%Y%m%d).pcap" &
     else
         echo "Skipped non-IP string: $IP" | tee -a $DEBUG_LOG
     fi
