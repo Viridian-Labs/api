@@ -10,13 +10,14 @@ from app.assets import Token
 from app.gauges import Gauge
 from app.settings import (
     CACHE,
+    DEFAULT_DECIMAL,
     FACTORY_ADDRESS,
     LOGGER,
     VOTER_ADDRESS,
-    DEFAULT_DECIMAL
 )
 
 PAIRLISTS_CACHE_KEY = "pairs:chain_addresses"
+
 
 class Pair(Model):
     """Liquidity pool pairs model."""
@@ -59,19 +60,22 @@ class Pair(Model):
     def syncup_gauge(self):
         """Fetches own gauges data from chain."""
         if self.gauge_address in (ADDRESS_ZERO, None):
-            return None       
+            return None
 
         if self.tvl == 0:
-            LOGGER.warning("TVL is zero. Skipping APR update.")                  
-            return None 
+            LOGGER.warning("TVL is zero. Skipping APR update.")
+            return None
 
-        gauge = Gauge.from_chain(self.gauge_address)    
+        gauge = Gauge.from_chain(self.gauge_address)
 
-        if not gauge or not hasattr(gauge, 'reward') or gauge.reward is None:
-            LOGGER.error("Failed to update APR: Gauge or its reward attribute is missing.")
+        if not gauge or not hasattr(gauge, "reward") or gauge.reward is None:
+            LOGGER.error(
+                "Failed to update APR: Gauge or its reward attribute \
+                    is missing."
+            )
             return gauge
-        
-        return gauge    
+
+        return gauge
 
     @classmethod
     def find(cls, address):
@@ -94,7 +98,7 @@ class Pair(Model):
                 Call(
                     FACTORY_ADDRESS,
                     ["allPairs(uint256)(address)", idx],
-                    [[idx, None]]
+                    [[idx, None]],
                 )
                 for idx in range(0, pairs_count)
             ]
@@ -109,61 +113,92 @@ class Pair(Model):
         data = cls._fetch_pair_data_from_chain(address)
         if not data:
             return None
-        
-        cls._normalize_data(data)        
+
+        cls._normalize_data(data)
         cls._cleanup_old_data(address)
-        
+
         pair = cls.create(**data)
-        LOGGER.debug("Fetched %s:(%s) %s.", cls.__name__, pair.symbol, pair.address)
-        
+        LOGGER.debug(
+            "Fetched %s:(%s) %s.", cls.__name__, pair.symbol, pair.address
+        )
+
         pair.syncup_gauge()
         return pair
-    
-    
+
     @classmethod
     def _fetch_pair_data_from_chain(cls, address):
         try:
             pair_multi = cls._prepare_multicall(address)
             data = pair_multi()
-            LOGGER.debug("Loading %s:(%s) %s.", cls.__name__, data["symbol"], address)
+            LOGGER.debug(
+                "Loading %s:(%s) %s.", cls.__name__, data["symbol"], address
+            )
             data["address"] = address
             return data
         except Exception as e:
-            LOGGER.error("Error fetching pair data from chain for address %s: %s", address, e)
+            LOGGER.error(
+                "Error fetching pair data from chain for address %s: %s",
+                address,
+                e,
+            )
             return None
-        
 
     @classmethod
     def _normalize_data(cls, data):
         def normalize_value(value, decimals, error_msg):
             try:
-                return value / (10 ** decimals)
+                return value / (10**decimals)
             except (TypeError, ValueError):
                 LOGGER.error(error_msg)
                 return None
 
         try:
             decimals = data.get("decimals", 0)
-            data["total_supply"] = normalize_value(data.get("total_supply", 0), decimals, "Invalid decimals in total_supply normalization: %s" % decimals)
+            data["total_supply"] = normalize_value(
+                data.get("total_supply", 0),
+                decimals,
+                "Invalid decimals in total_supply normalization: %s"
+                % decimals,
+            )
 
             token0 = Token.find(data.get("token0_address"))
             if not token0:
-                LOGGER.warning("Token not found for address: %s", data.get("token0_address"))
+                LOGGER.warning(
+                    "Token not found for address: %s",
+                    data.get("token0_address"),
+                )
                 return None
 
             token1 = Token.find(data.get("token1_address"))
             if not token1:
-                LOGGER.warning("Token not found for address: %s", data.get("token1_address"))
+                LOGGER.warning(
+                    "Token not found for address: %s",
+                    data.get("token1_address"),
+                )
                 return None
 
             decimals0 = token0.decimals or int(DEFAULT_DECIMAL)
             decimals1 = token1.decimals or int(DEFAULT_DECIMAL)
 
-            data["reserve0"] = normalize_value(data.get("reserve0", 0), decimals0, "Invalid decimals in reserve0 normalization: %s" % token0.symbol)
-            data["reserve1"] = normalize_value(data.get("reserve1", 0), decimals1, "Invalid decimals in reserve1 normalization: %s" % token1.symbol)
+            data["reserve0"] = normalize_value(
+                data.get("reserve0", 0),
+                decimals0,
+                "Invalid decimals in reserve0 normalization: %s"
+                % token0.symbol,
+            )
+            data["reserve1"] = normalize_value(
+                data.get("reserve1", 0),
+                decimals1,
+                "Invalid decimals in reserve1 normalization: %s"
+                % token1.symbol,
+            )
 
             gauge_address = data.get("gauge_address")
-            data["gauge_address"] = gauge_address.lower() if gauge_address not in (ADDRESS_ZERO, None) else None
+            data["gauge_address"] = (
+                gauge_address.lower()
+                if gauge_address not in (ADDRESS_ZERO, None)
+                else None
+            )
             data["tvl"] = cls._tvl(data, token0, token1)
             data["isStable"] = data.get("stable", False)
             data["totalSupply"] = data.get("total_supply", 0)
@@ -174,21 +209,15 @@ class Pair(Model):
 
         return data
 
-
-
-    
-        
-
     @classmethod
     def _cleanup_old_data(cls, address):
         cls.query_delete(cls.address == address.lower())
-        
 
     @classmethod
     def _prepare_multicall(cls, address):
         """
         Prepares a Multicall object with multiple blockchain method calls.
-        
+
         :param address: The address on the blockchain to call methods on.
         :type address: str
         :return: A Multicall object with prepared method calls.
@@ -203,7 +232,9 @@ class Pair(Model):
                 ),
                 Call(address, "token0()(address)", [["token0_address", None]]),
                 Call(address, "token1()(address)", [["token1_address", None]]),
-                Call(address, "totalSupply()(uint256)", [["total_supply", None]]),
+                Call(
+                    address, "totalSupply()(uint256)", [["total_supply", None]]
+                ),
                 Call(address, "symbol()(string)", [["symbol", None]]),
                 Call(address, "decimals()(uint8)", [["decimals", None]]),
                 Call(address, "stable()(bool)", [["stable", None]]),
@@ -214,7 +245,6 @@ class Pair(Model):
                 ),
             ]
         )
-
 
     @classmethod
     def _tvl(cls, pool_data, token0, token1):
@@ -237,8 +267,9 @@ class Pair(Model):
 
         LOGGER.debug(
             "Pool %s:(%s) has a TVL of %s.",
-            cls.__name__, pool_data["symbol"], tvl
+            cls.__name__,
+            pool_data["symbol"],
+            tvl,
         )
 
         return tvl
-

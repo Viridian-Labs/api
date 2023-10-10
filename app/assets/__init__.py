@@ -25,7 +25,6 @@ class Assets(object):
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)
         return assets
 
-
     def on_get(self, req, resp):
         """Caches and returns our assets"""
         assets = CACHE.get(self.CACHE_KEY) or Assets.recache()
