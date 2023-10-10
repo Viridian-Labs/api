@@ -43,10 +43,6 @@ When adding new dependencies, one should run:
 
     poetry add package@version
 
-Certainly! Below is a concise explanation in Markdown format:
-
----
-
 ### **Price Strategy Overview**
 
 The price strategy is designed to fetch the most accurate and reliable token prices by utilizing a combination of internal and external sources. It works by sequentially evaluating these sources based on a predefined order until a valid price is found.
