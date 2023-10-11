@@ -14,8 +14,12 @@ from requestlogger import ApacheFormatter, WSGILogger
 from app.assets import Assets
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.settings import (CORS_ALLOWED_DOMAINS, LOGGER, PORT,
+
+from app.voter.events import VoterContractMonitor
+
+from app.settings import (CORS_ALLOWED_DOMAINS, LOGGER, PORT, VOTER_ADDRESS, WEB3_PROVIDER_URI,
                           honeybadger_handler)
+
 from app.supply import Supply
 from app.venfts import Accounts
 
@@ -50,7 +54,12 @@ wsgi = WSGILogger(app, [StreamHandler(sys.stdout)], ApacheFormatter())
 
 def main():
     LOGGER.info("Starting on port %s ...", PORT)
+    
+    voter_monitor = VoterContractMonitor(contract_address=VOTER_ADDRESS, node_endpoint=WEB3_PROVIDER_URI)
+    
+    import threading
+    monitor_thread = threading.Thread(target=voter_monitor.monitor)
+    monitor_thread.start()
 
     import bjoern
-
     bjoern.run(wsgi, "", PORT, reuse_port=True)

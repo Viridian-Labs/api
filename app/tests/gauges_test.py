@@ -2,20 +2,46 @@
 
 import json
 from web3 import Web3
+import time
+
 from multicall import Call, Multicall
 from app.settings import (
     VOTER_ADDRESS,
     WRAPPED_BRIBE_FACTORY_ADDRESS,
     LOGGER,
+    CACHE,
+    WEB3_PROVIDER_URI,
     DEFAULT_DECIMAL,
 )
 from app.assets import Token
 
+
+
+
+CACHE_KEY = "gauges:test:json"
+
 class GaugesTestCase:
     def __init__(self):
         Token.from_tokenlists()
-        self.web3 = Web3()
+        self.web3 = Web3(Web3.HTTPProvider(WEB3_PROVIDER_URI))
 
+
+    def track_gauge_created_events(self):
+        with open('app/abis/Voter.sol/abi.json', 'r') as file:
+            self.CONTRACT_ABI = json.load(file)
+
+            self.contract = self.web3.eth.contract(address=VOTER_ADDRESS, abi=self.CONTRACT_ABI)
+
+            start_block = 0  # Replace with the block number from which you want to start fetching
+            end_block = 'latest'  # Replace with the block number till which you want to fetch, or use 'latest'
+
+            event_filter = self.contract.events.GaugeKilled.createFilter(fromBlock=start_block, toBlock=end_block)
+        
+        
+        
+        return event_filter
+
+    
     def _fetch_pair_data(self, pair_address):
         try:
             pair = Multicall([
@@ -50,6 +76,8 @@ class GaugesTestCase:
             return None
 
     def test_fetch_external_rewards(self, pair_address):
+        t0 = time.time()
+
         pair = self._fetch_pair_data(pair_address)
         if not pair:
             return
@@ -83,7 +111,6 @@ class GaugesTestCase:
             reward_calls.append(Call(wrapped_bribe_address, ["left(address)(uint256)", bribe_token_address], [[bribe_token_address, None]]))
 
         rewards_data = Multicall(reward_calls)()
-
         
         LOGGER.info('Checking pair: %s', pair["symbol"])
         LOGGER.info('Checking fees gauge: %s', gauges["fees_address"])
@@ -109,9 +136,32 @@ class GaugesTestCase:
                 amount = balance["balanceOf"] / 10 ** decimals
 
                 print(f"Token: {token.symbol} (Address: {token.address}), Balance: {amount}, Rewards: {rewards}, Tvb: {tbv}")
+        
+        LOGGER.info("Total Gauge Syncing done in %s seconds.", time.time() - t0)
+
+
+    def handle_gauge_created_events(self, event_filter):
+        try:
+            events = event_filter.get_new_entries()
+            for event in events:
+                gauge_address = event['args']['gaugeAddress']
+                # ... handle other fields if present in the event
+                LOGGER.info('GaugeCreated event detected. Gauge address: %s', gauge_address)
+        except ValueError as e:
+            # Check if error is due to filter not found
+            if 'filter not found' in str(e):
+                LOGGER.warning("Filter lost. Recreating...")
+                event_filter = self.track_gauge_created_events()  # Recreate the filter
+                self.handle_gauge_created_events(event_filter)  # Retry handling events
+            else:
+                raise  # If it's some other error, raise it
+
 
 if __name__ == "__main__":
     #address = "0x5a574F12299A5C1a70a0E1dD2fD2E0d2417211a6"
     address = "0x78Ef6D3E3d0da9B2248C11BE11743B4C573ADd25"
     tester = GaugesTestCase()
     tester.test_fetch_external_rewards(address)
+
+    event_filter = tester.track_gauge_created_events()
+    tester.handle_gauge_created_events(event_filter)

@@ -20,6 +20,7 @@ honeybadger = "0.8.0"
 python-environ = "0.4.54"
 black = "^22.8.0"
 flake8 = "^5.0.4"
+blinker = { git = "https://github.com/pallets-eco/blinker.git" }
 
 [tool.poetry.scripts]
 api-start = 'app.app:main'
