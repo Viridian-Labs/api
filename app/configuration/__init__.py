@@ -63,7 +63,7 @@ class Configuration(object):
                 volume_h6=volume_h6,
                 volume_h24=volume_h24,
             )
-            CACHE.setex(
+            CACHE.set(
                 self.CACHE_KEY, self.CACHE_TIME, json.dumps(
                     data, cls=JSONEncoder)
             )

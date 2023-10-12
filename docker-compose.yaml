@@ -21,16 +21,7 @@ services:
     env_file:
       - .env
 
-  sync:
-    build:
-      context: .
-      target: sync
-    volumes:
-      - ./:/app
-    networks:
-      - backend
-    env_file:
-      - .env
+  
 
 networks:
   backend:

@@ -55,7 +55,7 @@ class CirculatingSupply(object):
         data["circulating_supply"] = \
             data["total_supply"] - data["locked_supply"]
 
-        CACHE.setex(cls.CACHE_KEY, cls.CACHE_TIME, data["circulating_supply"])
+        CACHE.set(cls.CACHE_KEY, cls.CACHE_TIME, data["circulating_supply"])
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)
 
         return data["circulating_supply"]

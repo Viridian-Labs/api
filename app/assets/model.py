@@ -62,7 +62,8 @@ class Token(Model):
     stable = BooleanField(default=0)
     liquid_staked_address = TextField()
     created_at = FloatField(default=w3.eth.get_block("latest").timestamp)
-    taxes = FloatField(default=0)
+    taxed = BooleanField(default=0)
+    tax = FloatField(default=0)
 
     DEXSCREENER_ENDPOINT = DEXSCREENER_ENDPOINT
     DEFILLAMA_ENDPOINT = DEFILLAMA_ENDPOINT
@@ -471,9 +472,10 @@ class Token(Model):
             "logoURI": self.logoURI,
             "price": self.price,
             "stable": self.stable,
+            "taxed": self.taxed,
             "liquid_staked_address": self.liquid_staked_address,
             "created_at": self.created_at,
-            "taxes": self.taxes,
+            "tax": self.tax,
         }
 
     @classmethod
@@ -547,5 +549,7 @@ class Token(Model):
             symbol=symbol,
         )
         token.stable = 1 if "stablecoin" in tags[0] else 0
+        token.taxed = 1 if len(tags) > 1 and isinstance(tags[1], str) and "taxed" in tags[1] else 0
+        token.tax = token_data.get("tax", 0)
         token._update_price()
         return token

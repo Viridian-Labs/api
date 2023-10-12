@@ -29,6 +29,5 @@ EXPOSE 8000
 
 ENTRYPOINT ["api-start"]
 
-FROM prod AS sync
-
-ENTRYPOINT ["api-sync"]
+#FROM prod AS sync
+#ENTRYPOINT ["api-sync"]

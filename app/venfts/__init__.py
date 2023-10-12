@@ -80,7 +80,7 @@ class Accounts(object):
         serialized = json.dumps(
             dict(data=rewards, meta=emissions), cls=JSONEncoder)
 
-        CACHE.setex(cls.CACHE_KEY % address, cls.KEEPALIVE, serialized)
+        CACHE.set(cls.CACHE_KEY % address, cls.KEEPALIVE, serialized)
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY % address)
 
         return serialized

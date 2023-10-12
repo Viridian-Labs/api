@@ -3,7 +3,7 @@
 from falcon import testing
 
 from app.app import app
-from app.pairs import syncer
+from app import syncer
 
 # Sync the initial data...
 syncer.sync()

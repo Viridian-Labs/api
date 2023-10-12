@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import time
+import json
+
 from multiprocessing import Process
 from multiprocessing.pool import ThreadPool
 
 from app.assets import Assets, Token
 from app.pairs import Pair, Pairs
-from app.settings import (CACHE, LOGGER, SYNC_WAIT_SECONDS,
+from app.settings import (CACHE, LOGGER, SYNC_WAIT_SECONDS, TOKEN_CACHE_EXPIRATION,
                           reset_multicall_pool_executor)
 from app.vara import VaraPrice
 
@@ -19,14 +21,15 @@ def is_cache_expired(key):
 
 
 def sync_tokens():
+
     """Syncs tokens and updates cache if needed."""
     cached_tokens_str = CACHE.get("assets:json")
     if cached_tokens_str and not is_cache_expired("assets:json"):
         LOGGER.debug("Using cached Token List.")
     else:
         LOGGER.debug("Updating Token List data...")
-        Token.from_tokenlists()
-        Assets.recache()
+        Assets.sync()                       
+        
 
 
 def sync_pairs():
