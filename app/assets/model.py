@@ -316,7 +316,7 @@ class Token(Model):
         for get_price, method_name in price_fetching_functions:
             price = get_price()
             if price > 0:
-                LOGGER.info(
+                LOGGER.debug(
                     "Price for %s fetched using %s", self.symbol, method_name
                 )
                 return self._finalize_update(price, start_time)

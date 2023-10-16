@@ -27,8 +27,21 @@ PORT = env.int("PORT", default=8000)
 
 # Logger setup
 LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(logging.StreamHandler(sys.stdout))
-LOGGER.setLevel(env("LOGGING_LEVEL", default="DEBUG"))
+
+# Adding StreamHandler to display logs in the console
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+LOGGER.addHandler(stream_handler)
+
+# Adding FileHandler to save logs in a file
+LOG_SAVE = env("LOG_SAVE", default=0)
+
+if LOG_SAVE:
+    file_handler = logging.FileHandler('app.log') 
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    LOGGER.addHandler(file_handler)
+
 
 # Tokenlists are split with a pipe char (unlikely to be used in URIs)
 TOKENLISTS = env("TOKENLISTS", default="").split("|")
@@ -84,7 +97,9 @@ CORS_ALLOWED_DOMAINS = env("CORS_ALLOWED_DOMAINS", default=None)
 GET_PRICE_INTERNAL_FIRST = env("GET_PRICE_INTERNAL_FIRST", default=True)
 
 DEFAULT_DECIMAL = env("DEFAULT_DECIMAL", default=18)
-LOG_VERBOSE = env("LOG_VERBOSE", default=0)
+LOG_VERBOSE = env("LOG_VERBOSE", default="info")
+LOGGER.setLevel(env("LOG_VERBOSE", default="DEBUG"))
+
 
 TOKEN_CACHE_EXPIRATION = env.int(
     "TOKEN_CACHE_EXPIRATION", default=120
@@ -101,6 +116,7 @@ SUPPLY_CACHE_EXPIRATION = env.int(
 
 # Placeholder for our cache instance (Redis)
 CACHE = None
+
 
 
 def reset_multicall_pool_executor():
@@ -145,7 +161,7 @@ def clear_cache():
 
 try:
     CACHE = Database.from_url(env("REDIS_URL"))
-    #clear_cache()
+    clear_cache()
     CACHE.ping()
 except (ValueError, redis.exceptions.ConnectionError):
     LOGGER.debug("No Redis server found, using memory ...")

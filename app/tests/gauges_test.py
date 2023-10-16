@@ -93,7 +93,7 @@ class GaugesTestCase:
         current_block = self.web3.eth.getBlock('latest')
         current_timestamp = current_block['timestamp']
 
-        LOGGER.info('Current timestamp %s: ', current_timestamp)
+        LOGGER.debug('Current timestamp %s: ', current_timestamp)
 
         with open('app/abis/ExternalBribe.sol/abi.json', 'r') as file:
             CONTRACT_ABI_EXTERNAL_BRIBE = json.load(file)
@@ -107,15 +107,15 @@ class GaugesTestCase:
         for idx in range(tokens_len):
             bribe_token_address = Call(wrapped_bribe_address, ["rewards(uint256)(address)", idx])()
             reward = contract.functions.tokenRewardsPerEpoch(Web3.toChecksumAddress(bribe_token_address), adjusted_timestamp).call()    
-            LOGGER.info('reward for  %s %s: ', bribe_token_address, reward)        
+            LOGGER.debug('reward for  %s %s: ', bribe_token_address, reward)        
             reward_calls.append(Call(wrapped_bribe_address, ["left(address)(uint256)", bribe_token_address], [[bribe_token_address, None]]))
 
         rewards_data = Multicall(reward_calls)()
         
-        LOGGER.info('Checking pair: %s', pair["symbol"])
-        LOGGER.info('Checking fees gauge: %s', gauges["fees_address"])
-        LOGGER.info('Checking bribes gauge: %s', gauges["bribe_address"])
-        LOGGER.info('Checking wrapped_bribe_address: %s', wrapped_bribe_address)
+        LOGGER.debug('Checking pair: %s', pair["symbol"])
+        LOGGER.debug('Checking fees gauge: %s', gauges["fees_address"])
+        LOGGER.debug('Checking bribes gauge: %s', gauges["bribe_address"])
+        LOGGER.debug('Checking wrapped_bribe_address: %s', wrapped_bribe_address)
 
         for (bribe_token_address, amount) in rewards_data.items():
             token = Token.find(bribe_token_address)
@@ -137,7 +137,7 @@ class GaugesTestCase:
 
                 print(f"Token: {token.symbol} (Address: {token.address}), Balance: {amount}, Rewards: {rewards}, Tvb: {tbv}")
         
-        LOGGER.info("Total Gauge Syncing done in %s seconds.", time.time() - t0)
+        LOGGER.debug("Total Gauge Syncing done in %s seconds.", time.time() - t0)
 
 
     def handle_gauge_created_events(self, event_filter):
@@ -146,7 +146,7 @@ class GaugesTestCase:
             for event in events:
                 gauge_address = event['args']['gaugeAddress']
                 # ... handle other fields if present in the event
-                LOGGER.info('GaugeCreated event detected. Gauge address: %s', gauge_address)
+                LOGGER.debug('GaugeCreated event detected. Gauge address: %s', gauge_address)
         except ValueError as e:
             # Check if error is due to filter not found
             if 'filter not found' in str(e):

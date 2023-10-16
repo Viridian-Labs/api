@@ -91,6 +91,8 @@ The application periodically syncs data points like tokens, pairs, and VARA pric
 1. **Tokens**: Checks cache validity (`assets:json`). If expired, fetches and updates the token list.
 2. **Pairs**: Checks cache validity (`pairs:json`). If expired, fetches and updates the pairs data using potential multi-threading.
 3. **VARA Price**: Checks cache validity (`vara:json`). If expired, fetches and updates the VARA price.
+4. **Circulating Supply**: Verifies cache validity (supply:string). If the cache is outdated, it fetches and updates the circulating supply.
+5. **Configuration**: Verifies cache validity (volume:json). If the cache is outdated, it fetches and updates the configuration, ensuring the dexscreener data isn't calculated in every call.
 
 The `sync` function orchestrates the synchronization, while `sync_forever` ensures continuous synchronization at intervals set by `SYNC_WAIT_SECONDS`.
 
@@ -103,7 +105,7 @@ Cache expiration times determine data validity duration in the cache. These can 
 - **TOKEN_CACHE_EXPIRATION**: Token data validity (default: 120 seconds).
 - **PAIR_CACHE_EXPIRATION**: Pairs data validity (default: 1 hour).
 - **VARA_CACHE_EXPIRATION**: VARA price validity (default: 1 hour).
+- **SUPPLY_CACHE_EXPIRATION**: Circulating supply validity (default: 1 hour).
 
 Adjust these configurations in the `.env` file to balance between data freshness and performance.
 
----
