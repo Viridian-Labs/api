@@ -6,7 +6,7 @@ from datetime import timedelta
 import falcon
 from multicall import Call, Multicall
 
-from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER,
+from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER, SUPPLY_CACHE_EXPIRATION,
                           TREASURY_ADDRESS, VE_ADDRESS)
 
 
@@ -61,7 +61,9 @@ class Supply(object):
 
         supply_data = json.dumps(dict(data=data))
 
-        CACHE.set(cls.CACHE_KEY, cls.CACHE_TIME, supply_data)
+        CACHE.set(cls.CACHE_KEY, supply_data)
+        CACHE.expire(cls.CACHE_KEY, SUPPLY_CACHE_EXPIRATION)
+
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)
 
         return supply_data

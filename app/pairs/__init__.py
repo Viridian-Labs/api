@@ -115,7 +115,7 @@ class Pairs(object):
             req.get_param("pair_address"), req.get_param("gauge_address")
         )
 
-        pairs = CACHE.get(self.CACHE_KEY) or Pairs.recache()
+        pairs = CACHE.get(self.CACHE_KEY) 
 
         resp.status = falcon.HTTP_200
         resp.text = pairs

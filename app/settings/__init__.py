@@ -95,6 +95,9 @@ PAIR_CACHE_EXPIRATION = env.int(
 VARA_CACHE_EXPIRATION = env.int(
     "VARA_CACHE_EXPIRATION", default=3600
 )  # Default to 1 hour
+SUPPLY_CACHE_EXPIRATION = env.int(
+    "SUPPLY_CACHE_EXPIRATION", default=3600
+)  # Default to 1 hour
 
 # Placeholder for our cache instance (Redis)
 CACHE = None
@@ -142,7 +145,7 @@ def clear_cache():
 
 try:
     CACHE = Database.from_url(env("REDIS_URL"))
-    clear_cache()
+    #clear_cache()
     CACHE.ping()
 except (ValueError, redis.exceptions.ConnectionError):
     LOGGER.debug("No Redis server found, using memory ...")

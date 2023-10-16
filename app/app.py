@@ -44,8 +44,7 @@ wsgi = WSGILogger(app, [StreamHandler(sys.stdout)], ApacheFormatter())
 
 
 def main():
-    syncer.sync()  
-    
+
     voter_monitor = VoterContractMonitor(contract_address=VOTER_ADDRESS, node_endpoint=WEB3_PROVIDER_URI)
     monitor_thread = threading.Thread(target=voter_monitor.monitor)
     monitor_thread.start()
