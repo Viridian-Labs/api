@@ -16,7 +16,15 @@ from app.settings import (
 
 
 class Gauge(Model):
-    """Model representing a Gauge."""
+    """Model representing a Gauge with functionalities to fetch and update data from the blockchain.
+
+    The model provides methods to:
+    - Fetch and validate token decimals.
+    - Retrieve a gauge instance from cache or chain.
+    - Fetch gauge data from the blockchain.
+    - Update and rebase the APR for the gauge.
+    - Fetch both internal and external rewards associated with the gauge.
+    """
 
     __database__ = CACHE
 

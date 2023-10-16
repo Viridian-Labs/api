@@ -64,5 +64,10 @@ class CirculatingSupply:
     def on_get(self, req, resp):
         """Caches and returns our supply info"""
         supply_data = CACHE.get(self.CACHE_KEY)
-        resp.text = supply_data
-        resp.status = falcon.HTTP_200
+
+        if supply_data:
+            resp.text = supply_data
+            resp.status = falcon.HTTP_200
+        else:
+            LOGGER.warning("Supply not found in cache!")
+            resp.status = falcon.HTTP_204

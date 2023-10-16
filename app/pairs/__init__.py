@@ -19,14 +19,23 @@ from .model import Pair
 
 
 class Pairs(object):
-    """Handles our liquidity pools/pairs"""
+    """
+    Handles our liquidity pools/pairs.
 
-    # Seconds to expire the cache, a bit longer than the syncer schedule...
+    This class is responsible for fetching, serializing, and caching 
+    information about liquidity pools/pairs.
+    """
 
     CACHE_KEY = "pairs:json"
 
     @classmethod
     def serialize(cls):
+        """
+        Serializes pairs along with associated token and gauge data.
+
+        The method fetches and serializes all pairs, their tokens, and 
+        their gauges, if available.
+        """
         serialized_pairs = []
 
         for pair in Pair.all():
@@ -85,6 +94,12 @@ class Pairs(object):
 
     @classmethod
     def recache(cls):
+        """
+        Updates the cache with the serialized pair data.
+        
+        This method fetches fresh pair data, serializes it, and 
+        caches the serialized data for quick retrieval in subsequent requests.
+        """
         pairs = json.dumps(dict(data=cls.serialize()), cls=JSONEncoder)
 
         CACHE.set(cls.CACHE_KEY, pairs)
@@ -95,7 +110,12 @@ class Pairs(object):
         return pairs
 
     def resync(self, pair_address, gauge_address):
-        """Resyncs a pair based on it's address or gauge address."""
+        """
+        Resyncs a pair based on its address or gauge address.
+        
+        This method fetches the pair data from the blockchain and updates 
+        the cached data.
+        """
         if Web3.isAddress(gauge_address):
             old_pair = Pair.get(
                 Pair.gauge_address == str(gauge_address).lower()
@@ -110,12 +130,23 @@ class Pairs(object):
         Pairs.recache()
 
     def on_get(self, req, resp):
-        """Returns cached liquidity pools/pairs"""
+        """
+        Retrieves and returns the cached liquidity pools/pairs.
+        
+        This method checks if a specific pair or gauge address is provided 
+        and resyncs the data if necessary. It then fetches the cached 
+        pairs data and returns it.
+        """
         self.resync(
             req.get_param("pair_address"), req.get_param("gauge_address")
         )
 
         pairs = CACHE.get(self.CACHE_KEY) 
 
-        resp.status = falcon.HTTP_200
-        resp.text = pairs
+        if pairs:
+            resp.status = falcon.HTTP_200
+            resp.text = pairs
+        else:
+            LOGGER.warning("Pairs not found in cache!")
+            resp.status = falcon.HTTP_204
+

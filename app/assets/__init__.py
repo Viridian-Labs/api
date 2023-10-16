@@ -28,5 +28,9 @@ class Assets(object):
     def on_get(self, req, resp):
         """Caches and returns our assets"""
         assets = CACHE.get(self.CACHE_KEY) 
-        resp.status = falcon.HTTP_200
-        resp.text = assets
+        if assets:
+            resp.status = falcon.HTTP_200
+            resp.media = json.loads(assets)
+        else:
+            LOGGER.warning("Assets not found in cache!")
+            resp.status = falcon.HTTP_204

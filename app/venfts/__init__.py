@@ -15,13 +15,23 @@ from .model import VeNFT
 
 
 class Accounts(object):
-    """Handles our account veNFTs."""
+    """
+    Handles our account veNFTs.
+
+    This class manages the retrieval and caching of account veNFTs information.
+    It provides an endpoint to fetch the up-to-date account veNFTs and their associated data.
+    """
 
     KEEPALIVE = 5
     CACHE_KEY = "account:%s:json"
 
     @classmethod
     def serialize(cls, address):
+        """
+        Serializes veNFTs and associated rewards for a given address.
+
+        The method returns a tuple containing serialized veNFTs data and emission data.
+        """
         serialized = []
         to_meta = []
 
@@ -73,8 +83,15 @@ class Accounts(object):
 
         return serialized, to_meta
 
+
     @classmethod
     def recache(cls, address):
+        """
+        Updates the cache for veNFTs and returns the serialized data.
+
+        This method fetches fresh veNFTs data for the given address, serializes it, 
+        and caches the serialized data for quick retrieval in subsequent requests.
+        """
         rewards, emissions = cls.serialize(address)
 
         serialized = json.dumps(
@@ -86,14 +103,19 @@ class Accounts(object):
         return serialized
 
     def on_get(self, req, resp):
-        """Returns cached liquidity pools/pairs"""
+        """
+        Retrieves and returns the veNFTs and associated rewards for a given address.
+
+        This method fetches the veNFTs data from the cache or retrieves fresh data if 
+        needed. It also validates the provided address parameter and ensures the 
+        response structure is consistent.
+        """
         address = req.get_param("address")
         refresh = req.get_param("refresh")
 
-        resp.status = falcon.HTTP_200
-
         if not Web3.isAddress(address):
             resp.text = json.dumps(dict(data=[]))
+            resp.status = falcon.HTTP_200
             return
         else:
             address = address.lower()
@@ -104,4 +126,9 @@ class Accounts(object):
             cache_key = self.CACHE_KEY % address
             data = CACHE.get(cache_key) or Accounts.recache(address)
 
-        resp.text = data
+        if data:
+            resp.text = data
+            resp.status = falcon.HTTP_200
+        else:
+            LOGGER.warning("veNFTs data not found in cache for address %s!", address)
+            resp.status = falcon.HTTP_204

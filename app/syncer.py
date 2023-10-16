@@ -3,12 +3,12 @@
 import time
 import concurrent.futures
 
-from app.assets import Assets, Token
+from app.assets import Assets
 from app.pairs import Pair, Pairs
-from app.settings import (CACHE, LOGGER, SYNC_WAIT_SECONDS, TOKEN_CACHE_EXPIRATION,
-                          reset_multicall_pool_executor)
+from app.settings import CACHE, LOGGER, SYNC_WAIT_SECONDS, reset_multicall_pool_executor
 from app.vara import VaraPrice
 from app.circulating import CirculatingSupply
+from app.configuration import Configuration
 
 
 def is_cache_expired(key):
@@ -16,66 +16,63 @@ def is_cache_expired(key):
     return ttl is None or ttl <= 0
 
 
-def sync_tokens():
-    cached_tokens_str = CACHE.get("assets:json")
-    if cached_tokens_str and not is_cache_expired("assets:json"):
-        LOGGER.debug("Using cached Token List.")
+def sync_with_cache(key, task_name, sync_function, *args):
+    """Generalized function to check cache and run sync functions."""
+    cached_data_str = CACHE.get(key)
+    if cached_data_str and not is_cache_expired(key):
+        LOGGER.debug(f"Using cached {task_name}.")
     else:
-        LOGGER.debug("Updating Token List data...")
-        Assets.sync()
+        LOGGER.debug(f"Updating {task_name} data...")
+        sync_function(*args)
 
+
+def sync_tokens():
+    sync_with_cache("assets:json", "Token List", Assets.sync)
+
+def sync_circulating():
+    sync_with_cache("supply:string", "circulating supply", CirculatingSupply.recache)
+
+def sync_configuration():
+    sync_with_cache("volume:json", "configuration", Configuration.dexscreener_volume_data)
 
 def sync_pairs():
-    cached_pairs_str = CACHE.get("pairs:json")
-    if cached_pairs_str and not is_cache_expired("pairs:json"):
-        LOGGER.debug("Using cached Pairs.")
-    else:
-        LOGGER.debug("Updating Pairs data...")
-        addresses = Pair.chain_addresses()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-            LOGGER.debug(
-                "Syncing %s pairs using %s threads...",
-                len(addresses),
-                executor._max_workers
-            )
-            executor.map(Pair.from_chain, addresses)
-        Pairs.recache()
-
+    sync_with_cache("pairs:json", "Pairs", sync_pairs_data)
 
 def sync_vara():
-    cached_vara_str = CACHE.get("vara:json")
-    if cached_vara_str and not is_cache_expired("vara:json"):
-        LOGGER.debug("Using cached VARA price")
-    else:
-        LOGGER.debug("Updating VARA price...")
-        VaraPrice.recache()
-
+    sync_with_cache("vara:json", "VARA price", VaraPrice.recache)
 
 def sync_supply():
-    cached_tokens_str = CACHE.get("supply:string")
-    if cached_tokens_str and not is_cache_expired("supply:string"):
-        LOGGER.debug("Using cached supply.")
-    else:
-        LOGGER.debug("Updating supply data...")
-        CirculatingSupply.recache()
+    sync_with_cache("supply:json", "supply", CirculatingSupply.recache)
 
+def sync_pairs_data():
+    addresses = Pair.chain_addresses()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        LOGGER.debug(
+            "Syncing %s pairs using %s threads...",
+            len(addresses),
+            executor._max_workers
+        )
+        executor.map(Pair.from_chain, addresses)
+    Pairs.recache()
 
 def sync():
     t0 = time.time()
     
-    # Sync tokens first
     LOGGER.info("Syncing tokens ...")
     sync_tokens()
     
-    # Then run other tasks concurrently
+    # Concurrent execution
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        tasks = [executor.submit(task_func) for task_func in [sync_pairs, sync_vara, sync_supply]]
+        tasks = [
+            executor.submit(task_func) for task_func in [
+                sync_pairs, sync_vara, sync_supply, sync_circulating, sync_configuration
+            ]
+        ]
         for task in concurrent.futures.as_completed(tasks):
             task.result()
     
     LOGGER.info("Total Syncing done in %s seconds.", time.time() - t0)
     reset_multicall_pool_executor()
-
 
 def sync_forever():
     LOGGER.info("Syncing every %s seconds ...", SYNC_WAIT_SECONDS)
@@ -90,5 +87,4 @@ def sync_forever():
             LOGGER.error(error)
 
         time.sleep(SYNC_WAIT_SECONDS)
-
 

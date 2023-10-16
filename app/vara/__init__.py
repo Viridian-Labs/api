@@ -15,15 +15,28 @@ from app.assets import Token
 
 
 class VaraPrice(object):
-    """Handles supply info"""
+    """
+    Handles the retrieval and caching of the Vara price.
+
+    The class manages the caching and retrieval of the Vara price information.
+    This endpoint provides a quick way to fetch the up-to-date Vara token price.
+    """
 
     CACHE_KEY = "vara:json"
     CACHE_TIME = timedelta(minutes=5)
 
     @classmethod
     def recache(cls):
-        """Updates the cache for Vara price."""
+        """
+        Updates and returns the Vara token price.
+
+        This method fetches the fresh price of the Vara token from the database 
+        and caches it for quick retrieval in subsequent requests.
+        """
         token = Token.find(DEFAULT_TOKEN_ADDRESS)
+        if not token:
+            return None
+
         LOGGER.debug("Token: %s", token.symbol)
         LOGGER.debug("VARA price: %s", token.price)
 
@@ -33,11 +46,20 @@ class VaraPrice(object):
 
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)
 
-        return token.price
+        return str(token.price)
 
     def on_get(self, req, resp):
-        """Caches and returns our supply info."""
+        """
+        Retrieves and returns the Vara token price.
+
+        This method gets the Vara price from the cache. If the price isn't in 
+        the cache, it calls the recache() method to get fresh data.
+        """
         vara_price = CACHE.get(self.CACHE_KEY) or VaraPrice.recache()
 
-        resp.text = vara_price
-        resp.status = falcon.HTTP_200
+        if vara_price:
+            resp.text = vara_price
+            resp.status = falcon.HTTP_200
+        else:
+            LOGGER.warning("Vara price not found in cache!")
+            resp.status = falcon.HTTP_204
