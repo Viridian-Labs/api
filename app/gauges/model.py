@@ -4,10 +4,11 @@ from multicall import Call, Multicall
 from walrus import FloatField, HashField, IntegerField, Model, TextField
 from web3.constants import ADDRESS_ZERO
 
+from app.misc import ModelUteis
+
 from app.assets import Token
 from app.settings import (
     CACHE,
-    DEFAULT_DECIMAL,
     DEFAULT_TOKEN_ADDRESS,
     LOGGER,
     VOTER_ADDRESS,
@@ -47,14 +48,7 @@ class Gauge(Model):
     # Backwards compatibility fields
     bribeAddress = TextField()
     feesAddress = TextField()
-    totalSupply = FloatField()
-
-    @staticmethod
-    def _validate_token_decimals(token):
-        """Ensure token decimals are valid."""
-        if token.decimals is None or not isinstance(token.decimals, int):
-            token.decimals = DEFAULT_DECIMAL
-        return token
+    totalSupply = FloatField()  
 
     @classmethod
     def find(cls, address):
@@ -108,45 +102,61 @@ class Gauge(Model):
 
             if not data.get("isAlive"):
                 LOGGER.warning(
-                    f"Gauge {address} is not Alive. Skipping processing."
+                    f"Gauge {address} is not Alive."
+                )     
+            
+                        
+            data["total_supply"] = data["total_supply"] / cls.DEFAULT_DECIMALS
+            
+            token = Token.find(DEFAULT_TOKEN_ADDRESS)
+
+            if token is not None:
+
+                if data.get("reward_rate") is not None:
+                    data["reward"] = (
+                        data["reward_rate"] / 10**token.decimals * cls.DAY_IN_SECONDS
+                    )
+                else:
+                    LOGGER.warning(f"No reward rate data for address {address}")                
+
+                data["reward"] = (
+                    data["reward_rate"] / 10**token.decimals * cls.DAY_IN_SECONDS
                 )
-                return None
 
-            data["decimals"] = cls.DEFAULT_DECIMALS
-            data["total_supply"] = data["total_supply"] / data["decimals"]
+                if data.get("bribe_address") in (ADDRESS_ZERO, None):
+                    LOGGER.warning(f"No bribe address data for address {address}")
+                else:
 
-            token = cls._validate_token_decimals(
-                Token.find(DEFAULT_TOKEN_ADDRESS)
-            )
-            data["reward"] = (
-                data["reward_rate"] / 10**token.decimals * cls.DAY_IN_SECONDS
-            )
+                    data["bribeAddress"] = data["bribe_address"]
+                    data["feesAddress"] = data["fees_address"]
+                    data["totalSupply"] = data["total_supply"]
 
-            data["bribeAddress"] = data["bribe_address"]
-            data["feesAddress"] = data["fees_address"]
-            data["totalSupply"] = data["total_supply"]
+                    if data.get("bribe_address") not in (ADDRESS_ZERO, None):
+                        data["wrapped_bribe_address"] = Call(
+                            WRAPPED_BRIBE_FACTORY_ADDRESS,
+                            ["oldBribeToNew(address)(address)", data["bribe_address"]],
+                        )()
 
-            if data.get("bribe_address") not in (ADDRESS_ZERO, None):
-                data["wrapped_bribe_address"] = Call(
-                    WRAPPED_BRIBE_FACTORY_ADDRESS,
-                    ["oldBribeToNew(address)(address)", data["bribe_address"]],
-                )()
+                    if data.get("wrapped_bribe_address") in (ADDRESS_ZERO, ""):
+                        del data["wrapped_bribe_address"]
 
-            if data.get("wrapped_bribe_address") in (ADDRESS_ZERO, ""):
-                del data["wrapped_bribe_address"]
 
-            cls.query_delete(cls.address == address.lower())
+                    cls.query_delete(cls.address == address.lower())
 
-            gauge = cls.create(address=address, **data)
-            LOGGER.debug("Fetched %s:%s.", cls.__name__, address)
+                    gauge = cls.create(address=address, **data)
 
-            if data.get("wrapped_bribe_address") not in (ADDRESS_ZERO, None):
-                cls._fetch_external_rewards(gauge)
+                    LOGGER.debug("Fetched %s:%s.", cls.__name__, address)
 
-            cls._fetch_internal_rewards(gauge)
-            cls._update_apr(gauge)
+                    if data.get("wrapped_bribe_address") not in (ADDRESS_ZERO, None):
+                        cls._fetch_external_rewards(gauge)
 
-            return gauge
+
+                    cls._fetch_internal_rewards(gauge)
+                    cls._update_apr(gauge)
+
+                    return gauge
+            
+            return None
 
         except Exception as e:
             LOGGER.error(
@@ -156,8 +166,7 @@ class Gauge(Model):
             )
             return None
 
-    @classmethod
-    @CACHER.cached(timeout=(1 * DAY_IN_SECONDS))
+    @classmethod    
     def rebase_apr(cls):
         """Rebase the APR."""
         minter_address = Call(VOTER_ADDRESS, "minter()(address)")()
@@ -179,7 +188,7 @@ class Gauge(Model):
             VOTER_ADDRESS, ["weights(address)(uint256)", pair.address]
         )()
 
-        token = cls._validate_token_decimals(Token.find(DEFAULT_TOKEN_ADDRESS))
+        token = Token.find(DEFAULT_TOKEN_ADDRESS)
         votes = votes / 10**token.decimals
 
         gauge.apr = cls.rebase_apr()
@@ -211,21 +220,15 @@ class Gauge(Model):
         rewards_data = Multicall(reward_calls)()
 
         for bribe_token_address, amount in rewards_data.items():
-            token = cls._validate_token_decimals(
-                Token.find(bribe_token_address)
-            )
-            gauge.rewards[token.address] = amount / 10**token.decimals
 
-            if token.price:
-                gauge.tbv += amount / 10**token.decimals * token.price
+            token = Token.find(bribe_token_address)
 
-            LOGGER.debug(
-                "Fetched %s:%s reward %s:%s.",
-                cls.__name__,
-                gauge.address,
-                token.symbol,
-                gauge.rewards[token.address],
-            )
+            if token is not None:
+            
+                gauge.rewards[token.address] = amount / 10**token.decimals
+
+                if token.price:
+                    gauge.tbv += amount / 10**token.decimals * token.price         
 
         gauge.save()
 
@@ -256,7 +259,7 @@ class Gauge(Model):
         ]
 
         for token_address, fee in fees:
-            token = cls._validate_token_decimals(Token.find(token_address))
+            token = Token.find(token_address)
 
             if gauge.rewards.get(token_address):
                 gauge.rewards[token_address] = float(
@@ -267,13 +270,5 @@ class Gauge(Model):
 
             if token.price:
                 gauge.tbv += fee / 10**token.decimals * token.price
-
-            LOGGER.debug(
-                "Fetched %s:%s reward %s:%s.",
-                cls.__name__,
-                gauge.address,
-                token_address,
-                gauge.rewards[token_address],
-            )
 
         gauge.save()

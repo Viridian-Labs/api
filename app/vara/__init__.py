@@ -3,15 +3,14 @@
 from datetime import timedelta
 
 import falcon
+from app.assets import Token
 
 from app.settings import (
-    CACHE,
-    DEFAULT_TOKEN_ADDRESS,
+    CACHE,    
     LOGGER,
+    DEFAULT_TOKEN_ADDRESS,
     VARA_CACHE_EXPIRATION
 )
-
-from app.assets import Token
 
 
 class VaraPrice(object):
@@ -23,7 +22,11 @@ class VaraPrice(object):
     """
 
     CACHE_KEY = "vara:json"
-    CACHE_TIME = timedelta(minutes=5)
+    CACHE_TIME = timedelta(minutes=5)    
+
+    @classmethod
+    def sync(cls):
+        cls.recache()
 
     @classmethod
     def recache(cls):
@@ -33,20 +36,28 @@ class VaraPrice(object):
         This method fetches the fresh price of the Vara token from the database 
         and caches it for quick retrieval in subsequent requests.
         """
-        token = Token.find(DEFAULT_TOKEN_ADDRESS)
-        if not token:
+
+        try:
+            token = Token.find(DEFAULT_TOKEN_ADDRESS)
+
+            if token:
+
+                LOGGER.debug("Token: %s", token)
+                LOGGER.debug("VARA price: %s", token.price)
+
+                CACHE.set(cls.CACHE_KEY, str(token.price))
+                CACHE.expire(cls.CACHE_KEY, VARA_CACHE_EXPIRATION)
+
+                LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)
+                return str(token.price)
+
+        except AttributeError as e:
+            LOGGER.error("Error accessing token attributes: %s", e, exc_info=True)
             return None
 
-        LOGGER.debug("Token: %s", token.symbol)
-        LOGGER.debug("VARA price: %s", token.price)
+        return "0"
+        
 
-        # Cache the token price as a string
-        CACHE.set(cls.CACHE_KEY, str(token.price))
-        CACHE.expire(cls.CACHE_KEY, VARA_CACHE_EXPIRATION)
-
-        LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)
-
-        return str(token.price)
 
     def on_get(self, req, resp):
         """

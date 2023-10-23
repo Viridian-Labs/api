@@ -14,6 +14,11 @@ class CirculatingSupply:
     CACHE_KEY = "supply:string"
 
     @classmethod
+    def sync(cls):       
+        cls.recache()
+        
+
+    @classmethod
     def recache(cls):
 
         supply_multicall = Multicall(

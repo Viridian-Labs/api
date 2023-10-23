@@ -21,7 +21,19 @@ services:
     env_file:
       - .env
 
-  
+  sync:
+    build:
+      context: .
+      dockerfile: sync-service/Dockerfile
+    networks:
+      - backend
+    depends_on:
+      - redis
+      - api
+    env_file:
+      - .env
+
+      
 
 networks:
   backend:

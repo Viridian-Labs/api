@@ -14,7 +14,6 @@ class Assets(object):
 
     CACHE_KEY = "assets:json"
 
-
     @classmethod
     def sync(cls):       
         Tokens = Token.from_tokenlists()

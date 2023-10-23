@@ -17,7 +17,6 @@ from app.voter.events import VoterContractMonitor
 from app.settings import (CORS_ALLOWED_DOMAINS, LOGGER, PORT, VOTER_ADDRESS, WEB3_PROVIDER_URI, honeybadger_handler)
 from app.supply import Supply
 from app.venfts import Accounts
-from app import syncer
 
 middleware = [
     CompressionMiddleware(),
@@ -48,9 +47,6 @@ def main():
     voter_monitor = VoterContractMonitor(contract_address=VOTER_ADDRESS, node_endpoint=WEB3_PROVIDER_URI)
     monitor_thread = threading.Thread(target=voter_monitor.monitor)
     monitor_thread.start()
-    
-    syncer_thread = threading.Thread(target=syncer.sync_forever)  
-    syncer_thread.start()
 
     LOGGER.info("Starting on port %s ...", PORT)
     bjoern.run(wsgi, "", PORT, reuse_port=True)

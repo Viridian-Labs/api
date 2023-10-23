@@ -22,9 +22,9 @@ RUN poetry install
 
 COPY ./ /app
 
-RUN poetry lock
+#RUN poetry lock
 RUN poetry install --only-root
 
 EXPOSE 8000
 
-ENTRYPOINT ["api-start"]
+ENTRYPOINT ["python", "-c", "from app.syncer import Syncer; Syncer.sync_forever()"]
