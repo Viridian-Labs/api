@@ -36,9 +36,10 @@ class Pairs(object):
         previous_addresses_str = CACHE.get(cls.ADDRESSES_CACHE_KEY)
         previous_addresses = json.loads(previous_addresses_str) if previous_addresses_str else []
 
+        # TODO: Avoid reprocessing, just update the tokens prices, gauges etc
         if set(addresses) == set(previous_addresses):
             LOGGER.info("Addresses haven't changed, skipping sync.")
-            return 
+            #return 
         
         CACHE.set(cls.ADDRESSES_CACHE_KEY, json.dumps(addresses))
         
@@ -85,7 +86,16 @@ class Pairs(object):
                 data["gauge"] = gauge._data
                 data["gauge"]["bribes"] = []
 
-                
+                for (token_addr, reward_ammount) in gauge.rewards:
+                    data["gauge"]["bribes"].append(
+                        dict(
+                            token=Token.find(token_addr).to_dict(),
+                            reward_ammount=float(reward_ammount),
+                            # TODO: Backwards compat...
+                            rewardAmmount=float(reward_ammount),
+                        )
+                    )
+
             pairs.append(data)
 
         return pairs

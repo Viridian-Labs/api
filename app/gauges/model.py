@@ -212,8 +212,8 @@ class Gauge(Model):
     @classmethod
     def _fetch_external_rewards(cls, gauge):
         """Fetch external rewards for the gauge."""
-
-        print('FETCH external rewards', gauge)
+        
+        LOGGER.debug("Fetched %s:%s.", cls.__name__, gauge)
 
         tokens_len = Call(
             gauge.wrapped_bribe_address, "rewardsListLength()(uint256)"
@@ -236,15 +236,15 @@ class Gauge(Model):
 
         for bribe_token_address, amount in rewards_data.items():
 
-            bribe_token_address_str = bribe_token_address.decode('utf-8') if isinstance(bribe_token_address, bytes) else bribe_token_address
-            print('Procurando pelo token bribe', bribe_token_address, bribe_token_address_str)
+            bribe_token_address_str = bribe_token_address.decode('utf-8') if isinstance(bribe_token_address, bytes) else bribe_token_address            
+
+            LOGGER.debug("Checking bribe token %s:%s.", cls.__name__, bribe_token_address_str)
 
             token = Token.find(bribe_token_address_str)
 
-
             if token is not None:
-
-                print('Token localizado', token)
+                
+                LOGGER.debug("Bribe token found %s:%s.", cls.__name__, token.symbol)
             
                 gauge.rewards[token.address] = amount / 10**token.decimals
 
@@ -281,8 +281,7 @@ class Gauge(Model):
 
         for token_address, fee in fees:
 
-            token_address_str = token_address.decode('utf-8') if isinstance(token_address, bytes) else token_address
-            print('Procurando pelo INTERNAL token bribe', token_address_str, token_address)
+            token_address_str = token_address.decode('utf-8') if isinstance(token_address, bytes) else token_address            
 
             token = Token.find(token_address_str)
 
