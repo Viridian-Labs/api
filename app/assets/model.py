@@ -10,6 +10,7 @@ from web3.auto import w3
 from web3.exceptions import ContractLogicError
 from app.misc import ModelUteis
 
+
 from app.settings import (
     AXELAR_BLUECHIPS_ADDRESSES,
     BLUECHIP_TOKEN_ADDRESSES,
@@ -22,7 +23,7 @@ from app.settings import (
     NATIVE_TOKEN_ADDRESS,
     ROUTER_ADDRESS,
     STABLE_TOKEN_ADDRESS,
-    TOKENLISTS,
+    TOKENLISTS
 )
 
 DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/tokens/"
@@ -69,6 +70,28 @@ class Token(Model):
     DEFILLAMA_ENDPOINT = DEFILLAMA_ENDPOINT
     DEXGURU_ENDPOINT = DEXGURU_ENDPOINT
     DEBANK_ENDPOINT = DEBANK_ENDPOINT
+
+    ROUTE_CONFIGURATIONS = [
+    {
+        "route_type": "direct",
+        "method": "_get_direct_price"
+    },
+    {
+        "route_type": "axelar_bluechips",
+        "method": "_get_price_through_tokens",
+        "token_addresses": AXELAR_BLUECHIPS_ADDRESSES
+    },
+    {
+        "route_type": "bluechip_tokens",
+        "method": "_get_price_through_tokens",
+        "token_addresses": BLUECHIP_TOKEN_ADDRESSES
+    },
+    {
+        "route_type": "native_token",
+        "method": "_get_price_through_tokens",
+        "token_addresses": [NATIVE_TOKEN_ADDRESS]
+    },
+    ]
     
 
     def get_price_external_source(self):
@@ -137,34 +160,28 @@ class Token(Model):
             LOGGER.error("No stable coin found")
             return 0
 
-        price_getters_mapping = {
-            "direct": lambda: self._get_direct_price(stablecoin),
-            "axelar_bluechips": lambda: self._get_price_through_tokens(
-                AXELAR_BLUECHIPS_ADDRESSES, stablecoin
-            ),
-            "bluechip_tokens": lambda: self._get_price_through_tokens(
-                BLUECHIP_TOKEN_ADDRESSES, stablecoin
-            ),
-            "native_token": lambda: self._get_price_through_tokens(
-                [NATIVE_TOKEN_ADDRESS], stablecoin
-            ),
-        }
-
-        for route_type in INTERNAL_PRICE_ORDER:
-            if route_type in price_getters_mapping:
-                try:
-                    price = price_getters_mapping[route_type]()
-
+        for route_config in self.ROUTE_CONFIGURATIONS:
+            route_type = route_config["route_type"]
+            if route_type in INTERNAL_PRICE_ORDER:
+                method_name = route_config["method"]
+                method = getattr(self, method_name)
+                try:                    
+                    if "token_addresses" in route_config:
+                        price = method(route_config["token_addresses"], stablecoin)
+                    else:
+                        price = method(stablecoin)
+                    
                     if price > 0:
                         self.price = price
                         return price
                 except Exception as e:
-                    LOGGER.error(
-                        f"Error fetching price using {route_type}: {e}"
-                    )
+                    LOGGER.error(f"Error fetching price using {route_type}: {e}")
+                    
+                # Small delay to avoid kava rate limit
+                time.sleep(3)
+                    
             else:
                 LOGGER.error(f"Invalid route_type {route_type}")
-
         return 0
 
     def _get_direct_price(self, stablecoin):
@@ -186,6 +203,10 @@ class Token(Model):
         """
 
         try:
+
+            if self.decimals is None:
+                self.decimals = 18
+
             amount, is_stable = Call(
                 ROUTER_ADDRESS,
                 [
@@ -290,7 +311,13 @@ class Token(Model):
                 )
 
         return total_price
-
+    
+    def temporary_price_in_bluechips(self):
+        mToken = Token.find(self.liquid_staked_address)
+        if not mToken:
+            return 0
+        return mToken.price
+    
     def _update_price(self):
 
         """
@@ -341,56 +368,34 @@ class Token(Model):
 
     
     @classmethod
-    def from_tokenlists(cls):
+    def from_chain(cls, address, logoURI=None):
 
-        """Fetches and merges all the tokens from available tokenlists."""
+        """Fetches and returns a token from chain."""
 
-        our_chain_id = w3.eth.chain_id
+        try:
+            address = address.lower()
+            LOGGER.debug("Fetching from chain %s:%s...", cls.__name__, address)
+            
+            token_multi = Multicall(
+                [
+                    Call(address, ["name()(string)"], [["name", None]]),
+                    Call(address, ["symbol()(string)"], [["symbol", None]]),
+                    Call(address, ["decimals()(uint8)"], [["decimals", None]]),
+                ]
+            )
 
-        for tlist in TOKENLISTS:
-            try:
-                res = requests.get(tlist).json()
+            data = token_multi()
 
-                for token_data in res["tokens"]:
-                    try:
-                        # Skip tokens from other chains...
-                        if token_data.get("chainId", None) != our_chain_id:
-                            LOGGER.debug(
-                                "Token not in chain: %s", token_data["symbol"]
-                            )
-                            continue
-                        LOGGER.debug(
-                            "Loading %s---------------------------",
-                            token_data["symbol"],
-                        )
-                        token_data["address"] = token_data["address"].lower()
+            # TODO: Add a dummy logo...
+            token = cls.create(address=address, **data)
+            token._update_price()
 
-                        if token_data["address"] in IGNORED_TOKEN_ADDRESSES:
-                            continue
-                        if token_data["liquid_staked_address"]:
-                            token_data["liquid_staked_address"] = token_data[
-                                "liquid_staked_address"
-                            ].lower()
-                        token = cls.create(**token_data)
-                        token.stable = (
-                            1 if "stablecoin" in token_data["tags"][0] else 0
-                        )
-                        token._update_price()
+            LOGGER.debug("Fetched %s:%s.", cls.__name__, address)
 
-                        LOGGER.debug(
-                            "Loaded %s:(%s) %s with price %s.-------------",
-                            cls.__name__,
-                            token_data["symbol"],
-                            token_data["address"],
-                            token.price,
-                        )
-                    except Exception as error:
-                        LOGGER.error(error)
-                        continue
-            except Exception as error:
-                LOGGER.error(error)
-                continue
-
+            return token
+        except Exception as e:
+            LOGGER.error(f"Failed to fetch data for address {address}: {e}")            
+            return None
 
     def _get_price_from_dexscreener(self):
 
@@ -494,7 +499,7 @@ class Token(Model):
             return None
 
         try:
-            cached_data_str = CACHE.get("assets:json")
+            cached_data_str = CACHE.get("assets:json")            
             
             if cached_data_str:
                 cached_data_json = json.loads(cached_data_str)
@@ -503,10 +508,14 @@ class Token(Model):
                     if entry.get('address') == address:
                         return cls.create(**entry)
 
-                LOGGER.error(f"No matching entry found for address: {address}")
-            else:
-                LOGGER.error(f"Token data not found {address}")
-                return None
+                LOGGER.warning(f"No matching entry found in cache for address: {address}")                            
+
+            try:
+                return cls.load(address.lower())
+            except KeyError:
+                LOGGER.error("ERROR Fetching %s:%s...", cls.__name__, address)
+                return cls.from_chain(address.lower())
+                
 
         except Exception as e:
             LOGGER.error(f"Error fetching {cls.__name__} data from chain: {e}")
@@ -599,6 +608,22 @@ class Token(Model):
         token.tax = token_data.get("tax", False)
         token._update_price()
         return token
-    
 
+  
+    def to_dict(self):
+        return {
+            'address': self.address,
+            'name': self.name,
+            'symbol': self.symbol,
+            'decimals': self.decimals,
+            'logoURI': self.logoURI,
+            'price': self.price,
+            'stable': self.stable,
+            'liquid_staked_address': self.liquid_staked_address,
+            'created_at': self.created_at,
+            'taxed': self.taxed,
+            'tax': self.tax
+        }
+    
+    
 

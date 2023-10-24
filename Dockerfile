@@ -22,7 +22,7 @@ RUN poetry install
 
 COPY ./ /app
 
-RUN poetry lock
+#RUN poetry lock
 RUN poetry install --only-root
 
 EXPOSE 8000

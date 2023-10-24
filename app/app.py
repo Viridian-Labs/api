@@ -44,9 +44,9 @@ wsgi = WSGILogger(app, [StreamHandler(sys.stdout)], ApacheFormatter())
 
 def main():
 
-    voter_monitor = VoterContractMonitor(contract_address=VOTER_ADDRESS, node_endpoint=WEB3_PROVIDER_URI)
-    monitor_thread = threading.Thread(target=voter_monitor.monitor)
-    monitor_thread.start()
+    #voter_monitor = VoterContractMonitor(contract_address=VOTER_ADDRESS, node_endpoint=WEB3_PROVIDER_URI)
+    #monitor_thread = threading.Thread(target=voter_monitor.monitor)
+    #monitor_thread.start()
 
     LOGGER.info("Starting on port %s ...", PORT)
     bjoern.run(wsgi, "", PORT, reuse_port=True)

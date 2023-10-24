@@ -9,7 +9,7 @@ from multiprocessing import Process
 from multiprocessing.pool import ThreadPool
 
 from web3 import Web3
-from app.assets import Token
+from app.assets import Assets, Token
 from app.gauges import Gauge
 from app.misc import JSONEncoder
 from app.settings import CACHE, LOGGER, reset_multicall_pool_executor
@@ -22,33 +22,38 @@ class Pairs(object):
     """Handles liquidity pools/pairs and related operations."""
 
     CACHE_KEY = "pairs:json"
+    ADDRESSES_CACHE_KEY = "pairs:addresses"
 
 
     @classmethod
     def sync(cls):
         
-        """Syncs pair data from the blockchain and updates the cache."""
-
         LOGGER.info("Syncing pairs ...")
         t0 = time.time()
 
-        Token.from_tokenlists()
+        addresses = Pair.chain_addresses()
 
+        previous_addresses_str = CACHE.get(cls.ADDRESSES_CACHE_KEY)
+        previous_addresses = json.loads(previous_addresses_str) if previous_addresses_str else []
+
+        if set(addresses) == set(previous_addresses):
+            LOGGER.info("Addresses haven't changed, skipping sync.")
+            return 
+        
+        CACHE.set(cls.ADDRESSES_CACHE_KEY, json.dumps(addresses))
+        
 
         with ThreadPool(4) as pool:
-            addresses = Pair.chain_addresses()
-
             LOGGER.debug(
                 "Syncing %s pairs using %s threads...", len(
                     addresses), pool._processes
             )
-
             pool.map(Pair.from_chain, addresses)
             pool.close()
             pool.join()
 
         Pairs.recache() 
-
+        
         LOGGER.info("Syncing pairs done in %s seconds.", time.time() - t0)
 
         reset_multicall_pool_executor()
@@ -67,29 +72,20 @@ class Pairs(object):
         for pair in Pair.all():
             data = pair._data            
 
-            data["token0"] = Token.find(pair.token0_address.decode('utf-8')) if isinstance(pair.token0_address, bytes) else Token.find(pair.token0_address)
-            data["token1"] = Token.find(pair.token1_address.decode('utf-8')) if isinstance(pair.token1_address, bytes) else Token.find(pair.token1_address)
+            token0 = Token.find(pair.token0_address.decode('utf-8')) if isinstance(pair.token0_address, bytes) else Token.find(pair.token0_address)
+            token1 = Token.find(pair.token1_address.decode('utf-8')) if isinstance(pair.token1_address, bytes) else Token.find(pair.token1_address)
+            
+            if token0:
+                data["token0"] = token0.to_dict()
+            if token1:
+                data["token1"] = token1.to_dict()
 
             if pair.gauge_address:
-                print('pair.gauge_address', pair.gauge_address)
-                gauge = Gauge.find(pair.gauge_address.decode('utf-8')) if isinstance(pair.gauge_address, bytes) else Gauge.find(pair.gauge_address)
+                gauge = Gauge.find(pair.gauge_address)
+                data["gauge"] = gauge._data
+                data["gauge"]["bribes"] = []
 
-                if gauge is not None:
-                    data["gauge"] = gauge._data
-                    data["gauge"]["bribes"] = []
-
-                    for (token_addr, reward_ammount) in gauge.rewards:
-
-                        token_addr_str = token_addr.decode('utf-8') if isinstance(token_addr, bytes) else token_addr
-
-                        data["gauge"]["bribes"].append(
-                            dict(
-                                token=Token.find(token_addr_str),
-                                reward_ammount=float(reward_ammount),                                
-                                rewardAmmount=float(reward_ammount),
-                            )
-                        )
-
+                
             pairs.append(data)
 
         return pairs

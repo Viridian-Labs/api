@@ -74,7 +74,7 @@ class Syncer:
                         self.sync_configuration,                              
                         self.sync_vara,
                         self.sync_supply,
-                        self.sync_tokens,
+                        self.sync_tokens
                     ]
                 ]
                 for task in concurrent.futures.as_completed(tasks):

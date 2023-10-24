@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from multicall import Call, Multicall
-from walrus import FloatField, HashField, IntegerField, Model, TextField
+from walrus import FloatField, HashField, IntegerField, Model, TextField, BooleanField
 from web3.constants import ADDRESS_ZERO
 
 from app.misc import ModelUteis
@@ -44,6 +44,8 @@ class Gauge(Model):
     tbv = FloatField(default=0.0)
     votes = FloatField(default=0.0)
     apr = FloatField(default=0.0)
+    isAlive = BooleanField(default=False)
+    
 
     # Backwards compatibility fields
     bribeAddress = TextField()
@@ -107,24 +109,30 @@ class Gauge(Model):
             
                         
             data["total_supply"] = data["total_supply"] / cls.DEFAULT_DECIMALS
+
             
             token = Token.find(DEFAULT_TOKEN_ADDRESS)
 
             if token is not None:
 
+
+
                 if data.get("reward_rate") is not None:
+                    data["reward"] = (
+                        data["reward_rate"] / 10**token.decimals * cls.DAY_IN_SECONDS
+                    )
                     data["reward"] = (
                         data["reward_rate"] / 10**token.decimals * cls.DAY_IN_SECONDS
                     )
                 else:
                     LOGGER.warning(f"No reward rate data for address {address}")                
-
-                data["reward"] = (
-                    data["reward_rate"] / 10**token.decimals * cls.DAY_IN_SECONDS
-                )
+                    data["reward"] = 0                
 
                 if data.get("bribe_address") in (ADDRESS_ZERO, None):
                     LOGGER.warning(f"No bribe address data for address {address}")
+                    data["bribeAddress"] = ADDRESS_ZERO
+                    data["feesAddress"] = 0
+                    data["totalSupply"] = 0
                 else:
 
                     data["bribeAddress"] = data["bribe_address"]
@@ -136,12 +144,16 @@ class Gauge(Model):
                             WRAPPED_BRIBE_FACTORY_ADDRESS,
                             ["oldBribeToNew(address)(address)", data["bribe_address"]],
                         )()
+                    else:
+                        data["wrapped_bribe_address"] = ADDRESS_ZERO
 
                     if data.get("wrapped_bribe_address") in (ADDRESS_ZERO, ""):
                         del data["wrapped_bribe_address"]
-
+                    
 
                     cls.query_delete(cls.address == address.lower())
+
+                    data["isAlive"] = data.get("isAlive")
 
                     gauge = cls.create(address=address, **data)
 
@@ -200,6 +212,9 @@ class Gauge(Model):
     @classmethod
     def _fetch_external_rewards(cls, gauge):
         """Fetch external rewards for the gauge."""
+
+        print('FETCH external rewards', gauge)
+
         tokens_len = Call(
             gauge.wrapped_bribe_address, "rewardsListLength()(uint256)"
         )()
@@ -210,7 +225,7 @@ class Gauge(Model):
                 gauge.wrapped_bribe_address, ["rewards(uint256)(address)", idx]
             )()
             reward_calls.append(
-                Call(
+                Call(   
                     gauge.wrapped_bribe_address,
                     ["left(address)(uint256)", bribe_token_address],
                     [[bribe_token_address, None]],
@@ -221,9 +236,15 @@ class Gauge(Model):
 
         for bribe_token_address, amount in rewards_data.items():
 
-            token = Token.find(bribe_token_address)
+            bribe_token_address_str = bribe_token_address.decode('utf-8') if isinstance(bribe_token_address, bytes) else bribe_token_address
+            print('Procurando pelo token bribe', bribe_token_address, bribe_token_address_str)
+
+            token = Token.find(bribe_token_address_str)
+
 
             if token is not None:
+
+                print('Token localizado', token)
             
                 gauge.rewards[token.address] = amount / 10**token.decimals
 
@@ -259,7 +280,11 @@ class Gauge(Model):
         ]
 
         for token_address, fee in fees:
-            token = Token.find(token_address)
+
+            token_address_str = token_address.decode('utf-8') if isinstance(token_address, bytes) else token_address
+            print('Procurando pelo INTERNAL token bribe', token_address_str, token_address)
+
+            token = Token.find(token_address_str)
 
             if gauge.rewards.get(token_address):
                 gauge.rewards[token_address] = float(

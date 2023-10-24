@@ -48,7 +48,10 @@ class Pair(Model):
         if self.gauge_address in (ADDRESS_ZERO, None):
             return
 
-        gauge = Gauge.from_chain(self.gauge_address)
+        gauge_address_str = self.gauge_address.decode('utf-8') if isinstance(self.gauge_address, bytes) else self.gauge_address
+        print('SYNC GAUGE', gauge_address_str, self.gauge_address)
+
+        gauge = Gauge.from_chain(gauge_address_str)
         self._update_apr(gauge)
 
         return gauge
@@ -61,6 +64,8 @@ class Pair(Model):
             return
 
         token = Token.find(DEFAULT_TOKEN_ADDRESS)
+
+        print('updating token', token)
 
         if token is not None and gauge is not None:
             token_price = token.price
