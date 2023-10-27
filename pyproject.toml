@@ -21,7 +21,6 @@ python-environ = "0.4.54"
 black = "^22.8.0"
 flake8 = "^5.0.4"
 blinker = { git = "https://github.com/pallets-eco/blinker.git" }
-retrying = { git = "https://github.com/groodt/retrying" }
 
 [tool.poetry.scripts]
 api-start = 'app.app:main'

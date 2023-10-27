@@ -65,11 +65,15 @@ class Gauge(Model):
 
     @classmethod
     def from_chain(cls, address):
-        """Fetch gauge data from the chain."""
-        address = address.lower()
 
+        """Fetch gauge data from the chain."""
+        
+        address = address.lower()
+        
+        data = {}
+        
         try:
-            data = Multicall(
+            data_calls = Multicall(
                 [
                     Call(
                         address,
@@ -101,83 +105,77 @@ class Gauge(Model):
                     ),
                 ]
             )()
+            data.update(data_calls)
 
             if not data.get("isAlive"):
-                LOGGER.warning(
-                    f"Gauge {address} is not Alive."
-                )     
+                LOGGER.warning(f"Gauge {address} is not Alive.")
             
-                        
             data["total_supply"] = data["total_supply"] / cls.DEFAULT_DECIMALS
 
-            
             token = Token.find(DEFAULT_TOKEN_ADDRESS)
-
-            if token is not None:
-
-
-
-                if data.get("reward_rate") is not None:
-                    data["reward"] = (
-                        data["reward_rate"] / 10**token.decimals * cls.DAY_IN_SECONDS
-                    )
-                    data["reward"] = (
-                        data["reward_rate"] / 10**token.decimals * cls.DAY_IN_SECONDS
-                    )
-                else:
-                    LOGGER.warning(f"No reward rate data for address {address}")                
-                    data["reward"] = 0                
-
-                if data.get("bribe_address") in (ADDRESS_ZERO, None):
-                    LOGGER.warning(f"No bribe address data for address {address}")
-                    data["bribeAddress"] = ADDRESS_ZERO
-                    data["feesAddress"] = 0
-                    data["totalSupply"] = 0
-                else:
-
-                    data["bribeAddress"] = data["bribe_address"]
-                    data["feesAddress"] = data["fees_address"]
-                    data["totalSupply"] = data["total_supply"]
-
-                    if data.get("bribe_address") not in (ADDRESS_ZERO, None):
-                        data["wrapped_bribe_address"] = Call(
-                            WRAPPED_BRIBE_FACTORY_ADDRESS,
-                            ["oldBribeToNew(address)(address)", data["bribe_address"]],
-                        )()
+            if token:
+                try:
+                    if data.get("reward_rate") is not None:
+                        data["reward"] = (
+                            data["reward_rate"] / 10**token.decimals * cls.DAY_IN_SECONDS
+                        )
                     else:
-                        data["wrapped_bribe_address"] = ADDRESS_ZERO
+                        LOGGER.warning(f"No reward rate data for address {address}")                
+                        data["reward"] = 0                
+                except Exception as e:
+                    LOGGER.error(f"Error processing reward rate for address {address}: {e}")
 
-                    if data.get("wrapped_bribe_address") in (ADDRESS_ZERO, ""):
-                        del data["wrapped_bribe_address"]
-                    
+                try:
+                    if data.get("bribe_address") in (ADDRESS_ZERO, None):
+                        LOGGER.warning(f"No bribe address data for address {address}")
+                        data["bribeAddress"] = ADDRESS_ZERO
+                        data["feesAddress"] = 0
+                        data["totalSupply"] = 0
+                    else:
+                        data["bribeAddress"] = data["bribe_address"]
+                        data["feesAddress"] = data["fees_address"]
+                        data["totalSupply"] = data["total_supply"]
 
-                    cls.query_delete(cls.address == address.lower())
+                        if data.get("bribe_address") not in (ADDRESS_ZERO, None):
+                            data["wrapped_bribe_address"] = Call(
+                                WRAPPED_BRIBE_FACTORY_ADDRESS,
+                                ["oldBribeToNew(address)(address)", data["bribe_address"]],
+                            )()
+                        else:
+                            data["wrapped_bribe_address"] = ADDRESS_ZERO
 
-                    data["isAlive"] = data.get("isAlive")
+                        if data.get("wrapped_bribe_address") in (ADDRESS_ZERO, ""):
+                            del data["wrapped_bribe_address"]
 
-                    gauge = cls.create(address=address, **data)
+                        cls.query_delete(cls.address == address.lower())
+                        data["isAlive"] = data.get("isAlive")
 
-                    LOGGER.debug("Fetched %s:%s.", cls.__name__, address)
+                        gauge = cls.create(address=address, **data)
+                        LOGGER.debug("Fetched %s:%s.", cls.__name__, address)
 
-                    if data.get("wrapped_bribe_address") not in (ADDRESS_ZERO, None):
-                        cls._fetch_external_rewards(gauge)
+                        if data.get("wrapped_bribe_address") not in (ADDRESS_ZERO, None):
+                            cls._fetch_external_rewards(gauge)
 
+                        cls._fetch_internal_rewards(gauge)
+                        cls._update_apr(gauge)
+                        return gauge
 
-                    cls._fetch_internal_rewards(gauge)
-                    cls._update_apr(gauge)
-
-                    return gauge
+                except Exception as e:
+                    LOGGER.error(f"Error processing bribe data for address {address}: {e}")
             
-            return None
-
+            else:
+                LOGGER.warning(f"Token not found for default address: {DEFAULT_TOKEN_ADDRESS}")
+                
         except Exception as e:
             LOGGER.error(
                 "Error fetching gauge data from chain for address %s: %s",
                 address,
                 e,
             )
-            return None
 
+        return None
+
+   
     @classmethod    
     def rebase_apr(cls):
         """Rebase the APR."""
@@ -192,107 +190,126 @@ class Gauge(Model):
 
     @classmethod
     def _update_apr(cls, gauge):
+
         """Update the APR for the gauge."""
-        from app.pairs.model import Pair
 
-        pair = Pair.get(Pair.gauge_address == gauge.address)
-        votes = Call(
-            VOTER_ADDRESS, ["weights(address)(uint256)", pair.address]
-        )()
+        try:
+            from app.pairs.model import Pair
 
-        token = Token.find(DEFAULT_TOKEN_ADDRESS)
-        votes = votes / 10**token.decimals
+            pair = Pair.get(Pair.gauge_address == gauge.address)
+            votes = Call(
+                VOTER_ADDRESS, ["weights(address)(uint256)", pair.address]
+            )()
 
-        gauge.apr = cls.rebase_apr()
-        if token.price and votes * token.price > 0:
-            gauge.votes = votes
-            gauge.apr += ((gauge.tbv * 52) / (votes * token.price)) * 100
-            gauge.save()
+            token = Token.find(DEFAULT_TOKEN_ADDRESS)
+            votes = votes / 10**token.decimals
+
+            gauge.apr = cls.rebase_apr()
+            if token.price and votes * token.price > 0:
+                gauge.votes = votes
+                gauge.apr += ((gauge.tbv * 52) / (votes * token.price)) * 100
+                gauge.save()
+
+        except Exception as e:
+            LOGGER.error(f"Error updating APR for gauge {gauge.address}: {e}")
+
 
     @classmethod
     def _fetch_external_rewards(cls, gauge):
+
         """Fetch external rewards for the gauge."""
+
+        try:
         
-        LOGGER.debug("Fetched %s:%s.", cls.__name__, gauge)
+            LOGGER.debug("Fetched %s:%s.", cls.__name__, gauge)
 
-        tokens_len = Call(
-            gauge.wrapped_bribe_address, "rewardsListLength()(uint256)"
-        )()
-        reward_calls = []
-
-        for idx in range(tokens_len):
-            bribe_token_address = Call(
-                gauge.wrapped_bribe_address, ["rewards(uint256)(address)", idx]
+            tokens_len = Call(
+                gauge.wrapped_bribe_address, "rewardsListLength()(uint256)"
             )()
-            reward_calls.append(
-                Call(   
-                    gauge.wrapped_bribe_address,
-                    ["left(address)(uint256)", bribe_token_address],
-                    [[bribe_token_address, None]],
+            reward_calls = []
+
+            for idx in range(tokens_len):
+                bribe_token_address = Call(
+                    gauge.wrapped_bribe_address, ["rewards(uint256)(address)", idx]
+                )()
+                reward_calls.append(
+                    Call(   
+                        gauge.wrapped_bribe_address,
+                        ["left(address)(uint256)", bribe_token_address],
+                        [[bribe_token_address, None]],
+                    )
                 )
-            )
 
-        rewards_data = Multicall(reward_calls)()
+            rewards_data = Multicall(reward_calls)()
 
-        for bribe_token_address, amount in rewards_data.items():
+            for bribe_token_address, amount in rewards_data.items():
 
-            bribe_token_address_str = bribe_token_address.decode('utf-8') if isinstance(bribe_token_address, bytes) else bribe_token_address            
+                bribe_token_address_str = bribe_token_address.decode('utf-8') if isinstance(bribe_token_address, bytes) else bribe_token_address            
 
-            LOGGER.debug("Checking bribe token %s:%s.", cls.__name__, bribe_token_address_str)
+                LOGGER.debug("Checking bribe token %s:%s.", cls.__name__, bribe_token_address_str)
 
-            token = Token.find(bribe_token_address_str)
+                token = Token.find(bribe_token_address_str)
 
-            if token is not None:
+                if token is not None:
+                    
+                    LOGGER.debug("Bribe token found %s: %s %s.", cls.__name__, token.symbol, token.address)
                 
-                LOGGER.debug("Bribe token found %s:%s.", cls.__name__, token.symbol)
-            
-                gauge.rewards[token.address] = amount / 10**token.decimals
+                    gauge.rewards[token.address] = amount / 10**token.decimals
 
-                if token.price:
-                    gauge.tbv += amount / 10**token.decimals * token.price         
+                    if token.price:
+                        gauge.tbv += amount / 10**token.decimals * token.price         
 
-        gauge.save()
+            gauge.save()
+        except Exception as e:
+            LOGGER.error(f"Error fetching external rewards for gauge {gauge.address}: {e}")
 
     @classmethod
     def _fetch_internal_rewards(cls, gauge):
+
         """Fetch internal rewards for the gauge."""
-        from app.pairs.model import Pair
 
-        pair = Pair.get(Pair.gauge_address == gauge.address)
-        fees_data = Multicall(
-            [
-                Call(
-                    gauge.fees_address,
-                    ["left(address)(uint256)", pair.token0_address],
-                    [["fees0", None]],
-                ),
-                Call(
-                    gauge.fees_address,
-                    ["left(address)(uint256)", pair.token1_address],
-                    [["fees1", None]],
-                ),
+        try:
+            from app.pairs.model import Pair
+
+            pair = Pair.get(Pair.gauge_address == gauge.address)
+            fees_data = Multicall(
+                [
+                    Call(
+                        gauge.fees_address,
+                        ["left(address)(uint256)", pair.token0_address],
+                        [["fees0", None]],
+                    ),
+                    Call(
+                        gauge.fees_address,
+                        ["left(address)(uint256)", pair.token1_address],
+                        [["fees1", None]],
+                    ),
+                ]
+            )()
+
+            fees = [
+                [pair.token0_address, fees_data["fees0"]],
+                [pair.token1_address, fees_data["fees1"]],
             ]
-        )()
 
-        fees = [
-            [pair.token0_address, fees_data["fees0"]],
-            [pair.token1_address, fees_data["fees1"]],
-        ]
+            for token_address, fee in fees:
 
-        for token_address, fee in fees:
+                token_address_str = token_address.decode('utf-8') if isinstance(token_address, bytes) else token_address            
 
-            token_address_str = token_address.decode('utf-8') if isinstance(token_address, bytes) else token_address            
+                token = Token.find(token_address_str)
 
-            token = Token.find(token_address_str)
+                if gauge.rewards.get(token_address):
+                    gauge.rewards[token_address] = float(
+                        gauge.rewards[token_address]
+                    ) + (fee / 10**token.decimals)
+                elif fee > 0:
+                    gauge.rewards[token_address] = fee / 10**token.decimals
 
-            if gauge.rewards.get(token_address):
-                gauge.rewards[token_address] = float(
-                    gauge.rewards[token_address]
-                ) + (fee / 10**token.decimals)
-            elif fee > 0:
-                gauge.rewards[token_address] = fee / 10**token.decimals
+                if token.price:
+                    gauge.tbv += fee / 10**token.decimals * token.price
 
-            if token.price:
-                gauge.tbv += fee / 10**token.decimals * token.price
+            gauge.save()
 
-        gauge.save()
+        except Exception as e:
+            LOGGER.error(f"Error fetching internal rewards for gauge {gauge.address}: {e}")
+

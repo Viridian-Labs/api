@@ -62,6 +62,12 @@ BLUECHIP_TOKEN_ADDRESSES = (
 AXELAR_BLUECHIPS_ADDRESSES = (
     env("AXELAR_BLUECHIPS_ADDRESSES", default="").lower().split(",")
 )
+RETRY_DELAY = (
+    env("RETRY_DELAY", default=30)
+)
+
+
+
 
 INTERNAL_PRICE_ORDER = env(
     "INTERNAL_PRICE_ORDER",

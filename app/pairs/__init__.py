@@ -36,11 +36,10 @@ class Pairs(object):
         previous_addresses_str = CACHE.get(cls.ADDRESSES_CACHE_KEY)
         previous_addresses = json.loads(previous_addresses_str) if previous_addresses_str else []
 
-        # TODO: Avoid reprocessing, just update the tokens prices, gauges etc
         if set(addresses) == set(previous_addresses):
-            LOGGER.info("Addresses haven't changed, skipping sync.")
-            #return 
-        
+            LOGGER.info("Addresses haven't changed...")
+            
+          
         CACHE.set(cls.ADDRESSES_CACHE_KEY, json.dumps(addresses))
         
 
@@ -100,6 +99,9 @@ class Pairs(object):
 
         return pairs
 
+    @classmethod
+    def recache_price_and_gauge_data(cls):
+        cls.recache()
 
     @classmethod
     def recache(cls):

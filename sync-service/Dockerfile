@@ -8,7 +8,8 @@ RUN apt-get update
 RUN apt-get install -y --no-install-recommends gcc g++ libssl-dev libev-dev curl
 RUN apt-get clean
 
-RUN curl -sSL https://install.python-poetry.org | python -
+RUN pip install poetry
+
 
 ENV PATH="$PATH:$POETRY_HOME/bin"
 
@@ -22,9 +23,9 @@ RUN poetry install
 
 COPY ./ /app
 
-#RUN poetry lock
+RUN poetry lock
 RUN poetry install --only-root
 
 EXPOSE 8000
-
+RUN export PYTHONWARNINGS="ignore:Unverified HTTPS request"
 ENTRYPOINT ["python", "-c", "from app.syncer import Syncer; Syncer.sync_forever()"]

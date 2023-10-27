@@ -23,13 +23,17 @@ from app.settings import (
     NATIVE_TOKEN_ADDRESS,
     ROUTER_ADDRESS,
     STABLE_TOKEN_ADDRESS,
-    TOKENLISTS
+    TOKENLISTS,
+    ROUTE_TOKEN_ADDRESSES,
+    RETRY_DELAY
 )
 
 DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/tokens/"
 DEFILLAMA_ENDPOINT = "https://coins.llama.fi/prices/current/"
 DEXGURU_ENDPOINT = "https://api.dev.dex.guru/v1/chain/10/tokens/%/market"
 DEBANK_ENDPOINT = "https://api.debank.com/history/token_price?chain=op&"
+
+MAX_RETRIES = 3
 
 
 class Token(Model):
@@ -90,6 +94,16 @@ class Token(Model):
         "route_type": "native_token",
         "method": "_get_price_through_tokens",
         "token_addresses": [NATIVE_TOKEN_ADDRESS]
+    },
+    {
+        "route_type": "stable_token",
+        "method": "_get_price_through_tokens",
+        "token_addresses": [STABLE_TOKEN_ADDRESS]
+    },
+    {
+        "route_type": "route_token",
+        "method": "_get_price_through_tokens",
+        "token_addresses": ROUTE_TOKEN_ADDRESSES
     },
     ]
     
@@ -174,11 +188,11 @@ class Token(Model):
                     if price > 0:
                         self.price = price
                         return price
-                except Exception as e:
-                    LOGGER.error(f"Error fetching price using {route_type}: {e}")
                     
-                # Small delay to avoid kava rate limit
-                time.sleep(3)
+                    time.sleep(RETRY_DELAY)
+
+                except Exception as e:
+                    LOGGER.error(f"Error fetching price using {route_type}: {e}")                    
                     
             else:
                 LOGGER.error(f"Invalid route_type {route_type}")
@@ -201,11 +215,10 @@ class Token(Model):
             ContractLogicError: If there is an error in getting the chain
             price for the token.
         """
+        
+        LOGGER.debug('Finding direct price for token: %s in terms of stablecoin: %s', self.symbol, stablecoin.symbol)
 
-        try:
-
-            if self.decimals is None:
-                self.decimals = 18
+        try:           
 
             amount, is_stable = Call(
                 ROUTER_ADDRESS,
@@ -222,26 +235,28 @@ class Token(Model):
             return 0
 
 
-    def _get_price_through_tokens(self, token_addresses, stablecoin):
+    def _get_price_through_tokens(self, token_addresses, routing_token):
 
         """
-        Calculate the total price of specified tokens in terms of a given stablecoin.
+        Calculate the total price of specified tokens in terms of a given routing token.
 
         Parameters:
         - token_addresses (list): A list of Ethereum addresses of the tokens.
-        - stablecoin (object): An object representing the stablecoin, containing its address and decimal places.
+        - routing token (object): An object representing the stablecoin, containing its address and decimal places.
 
         Returns:
-        - total_price (float): The total price of the specified tokens in terms of the given stablecoin.
+        - total_price (float): The total price of the specified tokens in terms of the given routing_token.
 
         Errors:
         - Logs an error and returns 0 if the token_addresses parameter is not a list.
         - Logs an error and continues if any token address is invalid or any unexpected result type is encountered during blockchain calls.
         - Logs an error and continues if any exception occurs during blockchain calls, including ContractLogicError.
         """
-
+        
+        LOGGER.debug('Finding price for token_addresses: %s in terms of routing_token: %s', token_addresses, routing_token.symbol)
+    
         token_addresses = [address for address in token_addresses if address]
-               
+
         if not isinstance(token_addresses, list):
             LOGGER.error("Invalid token_addresses type. Expected list.")
             return 0
@@ -249,7 +264,6 @@ class Token(Model):
         total_price = 0
 
         for token_address in token_addresses:
-            
             if (
                 not token_address
                 or not token_address.startswith("0x")
@@ -259,51 +273,16 @@ class Token(Model):
                 continue
 
             try:
-                resultA = Call(
-                    ROUTER_ADDRESS,
-                    [
-                        "getAmountOut(uint256,address,address)(uint256,bool)",
-                        1 * 10**self.decimals,
-                        self.address,
-                        token_address,
-                    ],
-                )()
-
-                if not isinstance(resultA, tuple):
-                    LOGGER.error(
-                        f"Unexpected result type for {token_address} in first \
-                        call. Expected tuple but got {type(resultA)}"
-                    )
-                    continue
-
-                amountA, _ = resultA
-
-                resultB = Call(
-                    ROUTER_ADDRESS,
-                    [
-                        "getAmountOut(uint256,address,address)(uint256,bool)",
-                        amountA,
-                        token_address,
-                        stablecoin.address,
-                    ],
-                )()
-
-                if not isinstance(resultB, tuple):
-                    LOGGER.error(
-                        f"Unexpected result type for {token_address} in \
-                            second call. Expected tuple but got \
-                                {type(resultB)}"
-                    )
-                    continue
-
-                amountB, _ = resultB
+                amountB = self._retry_get_amount_out(
+                    token_address, routing_token.address, routing_token.decimals
+                )
 
                 if isinstance(amountB, int) and amountB > 0:
-                    total_price += amountB / 10**stablecoin.decimals
+                    total_price += amountB / 10 ** routing_token.decimals
 
-            except ContractLogicError:
+            except ContractLogicError as e:
                 LOGGER.error(
-                    f"Contract logic error for token address: {token_address}"
+                    f"Price not found for token address: {token_address}"
                 )
             except Exception as e:
                 LOGGER.error(
@@ -311,13 +290,67 @@ class Token(Model):
                 )
 
         return total_price
+
+    def _retry_get_amount_out(self, token_address, target_address, target_decimals):
+        for i in range(MAX_RETRIES):
+            try:
+                result = Call(
+                    ROUTER_ADDRESS,
+                    [
+                        "getAmountOut(uint256,address,address)(uint256,bool)",
+                        1 * 10 ** self.decimals,
+                        self.address,
+                        token_address,
+                    ],
+                )()
+
+                if not isinstance(result, tuple):
+                    LOGGER.error(
+                        f"Unexpected result type for {token_address} in first call. Expected tuple but got {type(result)}"
+                    )
+                    continue
+
+                amount, _ = result
+
+                result = Call(
+                    ROUTER_ADDRESS,
+                    [
+                        "getAmountOut(uint256,address,address)(uint256,bool)",
+                        amount,
+                        token_address,
+                        target_address,
+                    ],
+                )()
+
+                if not isinstance(result, tuple):
+                    LOGGER.error(
+                        f"Unexpected result type for {token_address} in second call. Expected tuple but got {type(result)}"
+                    )
+                    continue
+
+                amount, _ = result
+
+                return amount
+
+            except ContractLogicError:
+                LOGGER.error(
+                    f"Price not found for token address: {token_address}"
+                )
+            except Exception as e:
+                LOGGER.error(
+                    f"Error getting amount out for {token_address}: {e}"
+                )
+
+            if i < MAX_RETRIES - 1:
+                LOGGER.warning(f"Retrying request after error for {token_address}")
+                time.sleep(RETRY_DELAY)
+            else:
+                LOGGER.error(
+                    f"Max retries reached. Unable to fetch data for {token_address}"
+                )
+                return 0
     
-    def temporary_price_in_bluechips(self):
-        mToken = Token.find(self.liquid_staked_address)
-        if not mToken:
-            return 0
-        return mToken.price
-    
+ 
     def _update_price(self):
 
         """
@@ -458,8 +491,10 @@ class Token(Model):
             res = requests.get(
                 self.DEBANK_ENDPOINT + "token_id=" + self.address.lower()
             )
+
             res.raise_for_status()
             token_data = res.json().get("data") or {}
+
             return token_data.get("price") or 0
         except (requests.RequestException, ValueError) as e:
             LOGGER.error("Error fetching price from DeBank: %s", e)
@@ -497,24 +532,26 @@ class Token(Model):
         if not address:
             LOGGER.error("Address is None. Unable to fetch %s.", cls.__name__)
             return None
-
+        
         try:
+
+            address_str = address.decode('utf-8') if isinstance(address, bytes) else address            
             cached_data_str = CACHE.get("assets:json")            
             
             if cached_data_str:
                 cached_data_json = json.loads(cached_data_str)
 
                 for entry in cached_data_json.get('data', []):
-                    if entry.get('address') == address:
+                    if entry.get('address') == address_str:
                         return cls.create(**entry)
 
-                LOGGER.warning(f"No matching entry found in cache for address: {address}")                            
+                LOGGER.warning(f"No matching entry found in cache for address: {address_str}")                            
 
             try:
-                return cls.load(address.lower())
+                return cls.load(address_str.address.lower()) if hasattr(address_str, 'address') else cls.load(address_str.lower())
             except KeyError:
-                LOGGER.error("ERROR Fetching %s:%s...", cls.__name__, address)
-                return cls.from_chain(address.lower())
+                LOGGER.error("ERROR Fetching %s:%s...", cls.__name__, address_str)
+                return cls.from_chain(address_str.address.lower()) if hasattr(address_str, 'address') else cls.from_chain(address_str.lower())
                 
 
         except Exception as e:

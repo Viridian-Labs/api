@@ -2,7 +2,6 @@
 
 import json
 import falcon
-from app.misc import ModelUteis
 from app.settings import CACHE, LOGGER, TOKEN_CACHE_EXPIRATION
 from .model import Token
 from app.misc import JSONEncoder
@@ -21,12 +20,7 @@ class Assets(object):
 
         CACHE.set("assets:json", json.dumps(dict(data=serializable_tokens)))
         CACHE.expire("assets:json", TOKEN_CACHE_EXPIRATION)
-
-        zero_price_tokens = ModelUteis.get_zero_price_tokens()
-
-        for token in zero_price_tokens:
-            print('zero_price_tokens', token)
-
+        
 
     @staticmethod
     def serialize():
