@@ -17,8 +17,8 @@ class Assets(object):
         Tokens = Token.from_tokenlists()
 
         serializable_tokens = [tok._data for tok in Tokens]
-
-        CACHE.set("assets:json", json.dumps(dict(data=serializable_tokens)))
+        
+        CACHE.set("assets:json", json.dumps(dict(data=serializable_tokens), cls=JSONEncoder))
         CACHE.expire("assets:json", TOKEN_CACHE_EXPIRATION)
         
 
@@ -58,8 +58,10 @@ class Assets(object):
         """Caches and returns our assets"""
         assets = CACHE.get(self.CACHE_KEY) 
         if assets:
-            resp.status = falcon.HTTP_200
-            resp.media = json.loads(assets)
+            resp.status = falcon.HTTP_200            
         else:
             LOGGER.warning("Assets not found in cache!")
-            resp.status = falcon.HTTP_204
+            assets = Assets.recache()
+
+        resp.media = json.loads(assets)
+           

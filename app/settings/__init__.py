@@ -30,7 +30,11 @@ LOGGER = logging.getLogger(__name__)
 
 # Adding StreamHandler to display logs in the console
 stream_handler = logging.StreamHandler(sys.stdout)
-stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+#stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+stream_handler.setFormatter(formatter)
+
 
 LOGGER.addHandler(stream_handler)
 
@@ -63,10 +67,12 @@ AXELAR_BLUECHIPS_ADDRESSES = (
     env("AXELAR_BLUECHIPS_ADDRESSES", default="").lower().split(",")
 )
 RETRY_DELAY = (
-    env("RETRY_DELAY", default=30)
+    env("RETRY_DELAY", default=10)
 )
 
-
+RETRY_COUNT = (
+    env("RETRY_COUNT", default=3)
+)
 
 
 INTERNAL_PRICE_ORDER = env(
@@ -101,6 +107,8 @@ CORS_ALLOWED_DOMAINS = env("CORS_ALLOWED_DOMAINS", default=None)
 
 # Get the price from external Source - Defillama
 GET_PRICE_INTERNAL_FIRST = env("GET_PRICE_INTERNAL_FIRST", default=True)
+GET_PRICE_INTERNAL_ONLY = env("GET_PRICE_INTERNAL_ONLY", default=True)
+
 
 DEFAULT_DECIMAL = env("DEFAULT_DECIMAL", default=18)
 LOG_VERBOSE = env("LOG_VERBOSE", default="info")

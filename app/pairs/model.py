@@ -14,7 +14,8 @@ from app.settings import (
     FACTORY_ADDRESS,
     LOGGER,
     VOTER_ADDRESS,
-    RETRY_DELAY
+    RETRY_DELAY,
+    RETRY_COUNT
 )
 
 
@@ -42,7 +43,7 @@ class Pair(Model):
     totalSupply = FloatField()
 
     
-    def syncup_gauge(self, retry_count=3, retry_delay=RETRY_DELAY):
+    def syncup_gauge(self, retry_count=RETRY_COUNT, retry_delay=RETRY_DELAY):
         """Fetches and updates the gauge data associated with this pair from the blockchain."""
         if self.gauge_address in (ADDRESS_ZERO, None):
             return
@@ -144,18 +145,27 @@ class Pair(Model):
             data = pair_multi()
             LOGGER.debug("Loading %s:(%s) %s.",
                         cls.__name__, data["symbol"], address)
-
+            
+            
             data["address"] = address
 
             data["total_supply"] = data["total_supply"] / (10 ** data["decimals"])
 
+            if not Token.is_token_present(data["token0_address"]) and not Token.is_token_present(data["token1_address"]):
+                LOGGER.debug(
+                    "Pair %s:(%s) has no known tokens.",
+                    cls.__name__,
+                    data["symbol"],
+                )
+                return None
+               
             token0 = Token.find(data["token0_address"])
             token1 = Token.find(data["token1_address"])
 
+
             if token0 and token1:       
                 data["reserve0"] = data["reserve0"] / (10 ** token0.decimals)
-                data["reserve1"] = data["reserve1"] / (10 ** token1.decimals)
-            
+                data["reserve1"] = data["reserve1"] / (10 ** token1.decimals)            
 
             if data.get("gauge_address") in (ADDRESS_ZERO, None):
                 data["gauge_address"] = None
@@ -165,7 +175,6 @@ class Pair(Model):
             data["tvl"] = cls._tvl(data, token0, token1)
 
             
-            # TODO: Remove once no longer needed...
             data["isStable"] = data["stable"]
             data["totalSupply"] = data["total_supply"]
         
@@ -175,7 +184,7 @@ class Pair(Model):
             LOGGER.debug("Fetched %s:(%s) %s.",
                         cls.__name__, pair.symbol, pair.address)
 
-            #pair.syncup_gauge()
+            pair.syncup_gauge()
 
             return pair
         
