@@ -10,14 +10,6 @@ class ModelUteis:
     A utility class providing static methods related to tokens and gauges.
     """
 
-    # Class level sets to store addresses of zero-price tokens and not-alive gauges.
-    zero_price_token_addresses = set()
-    not_alive_gauge_addresses = set()
-
-    # Class level lists to store actual token and gauge objects.
-    zero_price_tokens = []
-    not_alive_gauges = []
-
     @staticmethod
     def ensure_token_validity(token):
         """

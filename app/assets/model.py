@@ -377,6 +377,7 @@ class Token(Model):
         if self.address in AXELAR_BLUECHIPS_ADDRESSES + BLUECHIP_TOKEN_ADDRESSES:
             LOGGER.info("Price for %s fetched using External Source", self.symbol)
             return self._finalize_update(self.get_price_external_source(), start_time)
+        
 
         if GET_PRICE_INTERNAL_FIRST:
             LOGGER.debug("Getting price internal first for %s", self.symbol)
@@ -389,23 +390,76 @@ class Token(Model):
                 return self._finalize_update(self.get_price_external_source(), start_time)
         else:
             LOGGER.debug("Getting price internal and external for %s", self.symbol)
-            internal_price = self.get_price_internal_source()
+            
             external_price = self.get_price_external_source()
-            if internal_price > 0 and external_price > 0:
-                price = (internal_price + external_price) / 2
-                LOGGER.info(
-                    "Price for %s fetched using Internal and External Sources", self.symbol
-                )
-                return self._finalize_update(price, start_time)
-            elif internal_price > 0:
-                LOGGER.info("Price for %s fetched using Internal Source", self.symbol)
-                return self._finalize_update(internal_price, start_time)
-            elif external_price > 0:
+            
+            if external_price > 0:
                 LOGGER.info("Price for %s fetched using External Source", self.symbol)
                 return self._finalize_update(external_price, start_time)
+            
+            internal_price = self.get_price_internal_source()
+            
+            if internal_price > 0:
+                LOGGER.info("Price for %s fetched using Internal Source", self.symbol)
+                return self._finalize_update(internal_price, start_time)
+                                    
 
+        if self.price == 0:            
+            LOGGER.info("Price for %s fetched using Chain Price", self.symbol)
+            return self._finalize_update(self.chain_price_in_liquid_staked(), start_time)
+        
+        
+        if self.price == 0 and self.address in AXELAR_BLUECHIPS_ADDRESSES:            
+            LOGGER.info("Price for %s fetched using Chain Price", self.symbol)
+            self.price = self.temporary_price_in_bluechips()
+            
+            
         return self._finalize_update(0, start_time)       
+    
+    
+    def chain_price_in_liquid_staked(self):
+        """Returns the price quoted from our router in stables/USDC
+        passing through a liquid staked route"""
+        # Peg it forever.
+        if self.address == STABLE_TOKEN_ADDRESS:
+            return 1.0
+        # LOGGER.debug("Chain price Liquid Staked for %s", self.symbol)
+        stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
 
+        try:
+            liquid = Token.find(self.liquid_staked_address)
+            if not liquid:
+                return 0
+            amountA, is_stable = Call(
+                ROUTER_ADDRESS,
+                [
+                    "getAmountOut(uint256,address,address)(uint256,bool)",
+                    1 * 10**self.decimals,
+                    self.address,
+                    liquid.address,
+                ],
+            )()
+            amountB, is_stable = Call(
+                ROUTER_ADDRESS,
+                [
+                    "getAmountOut(uint256,address,address)(uint256,bool)",
+                    amountA,
+                    liquid.address,
+                    stablecoin.address,
+                ],
+            )()
+        except ContractLogicError:
+            return 0
+
+        return amountB / 10**stablecoin.decimals
+
+
+    def temporary_price_in_bluechips(self):
+        mToken = Token.find(self.liquid_staked_address)
+        if not mToken:
+            return 0
+        return mToken.price
+    
     
     @classmethod
     def from_chain(cls, address, logoURI=None):

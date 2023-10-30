@@ -11,9 +11,12 @@ options.add_argument('--start-maximized')
 browser = webdriver.Chrome(options=options)
 
 urls = [
-    "https://equilibrefinance.com/swap",
-    "https://equilibrefinance.com/pools",
-    "https://equilibrefinance.com/dashboard",
+    #"https://equilibrefinance.com/swap",
+    #"https://equilibrefinance.com/pools",
+    #"https://equilibrefinance.com/dashboard",
+    "http://localhost:3000/swap",
+    "http://localhost:3000/pools",
+    "http://localhost:3000/dashboard",
 ]
 
 wait = WebDriverWait(browser, 10)  # Wait for up to 10 seconds

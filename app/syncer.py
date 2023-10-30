@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import time
-import json
 import requests
 from multicall import Call, Multicall
 
@@ -11,7 +10,6 @@ from app.settings import CACHE, LOGGER, SYNC_WAIT_SECONDS, ROUTER_ADDRESS, reset
 from app.vara import VaraPrice
 from app.circulating import CirculatingSupply
 from app.configuration import Configuration
-from decimal import Decimal
 
 
 class Syncer:
@@ -56,6 +54,10 @@ class Syncer:
         
     @staticmethod
     def sync_special():
+        
+        
+        #tokens = Token.all()
+        #tokens_with_zero_price = [token for token in tokens if token.price == 0]
                 
         token_addresses = {
             'GMD': '0xeffae8eb4ca7db99e954adc060b736db78928467',
@@ -64,7 +66,7 @@ class Syncer:
             'CHAM': '0x0fb3e4e84fb78c93e466a2117be7bc8bc063e430',
             'xSHRAP': '0xe1e9db9b4d51a8878f030094f7965edc5eec7802',
             'SHRP': '0x308f66ebee21861d304c8013eb3a9a5fc78a8a6c',
-        }       
+        }      
 
         pairs_data = requests.get('https://api.equilibrefinance.com/api/v1/pairs').json()['data']
         #pairs_data = [p for p in Pair.all()]
@@ -85,28 +87,22 @@ class Syncer:
                 continue  
             
             LOGGER.info(f"Checking price for {our_token['symbol']}: {other_token['symbol']} via  {pair['symbol']}:{pair['address']}")
-            decimals = our_token['decimals']
-            
-            amount, isStable = Call(
-                        ROUTER_ADDRESS,
-                        [
-                            "getAmountOut(uint256,address,address)(uint256,bool)",
-                            1 * 10**decimals,
-                            other_token['address'],  
-                            our_token['address']     
-                        ]
-                    )()
-                       
-            price = amount / 10**int(other_token['decimals'])        
             
             token = Token.find(our_token['address'])
+
+            price = token._get_direct_price(Token.find(other_token['address']))
+            
             token.price = float(price)
             token.logoURI = our_token['logoURI']
             token.liquid_staked_address = our_token['liquid_staked_address']
-                        
-            token.save()         
             
-            LOGGER.info(f"Price for {token.symbol}: {token.price} - Amount {amount}")
+            token.save()
+                                    
+            LOGGER.info(f"Price for {token.symbol}: {token.price} - updated using other token {other_token['symbol']}")
+        
+        Assets.force_recache()
+        LOGGER.info("Assets cache updated")
+        
                     
                                      
 
@@ -115,10 +111,10 @@ class Syncer:
         t0 = time.time()
         LOGGER.info("Syncing data...")
 
-        #Syncer.sync_tokens()
+        Syncer.sync_tokens()
         t1 = time.time()
 
-        #Syncer.sync_pairs()
+        Syncer.sync_pairs()
         t2 = time.time()
 
         Syncer.sync_special()

@@ -38,6 +38,12 @@ class Assets(object):
 
         return pairs       
 
+    @classmethod
+    def force_recache(cls):
+            """
+            Forces a cache refresh for this token.
+            """            
+            cls.recache()
 
     @classmethod
     def recache(cls):
