@@ -54,11 +54,6 @@ class Syncer:
         
     @staticmethod
     def sync_special():
-        
-        
-        #tokens = Token.all()
-        #tokens_with_zero_price = [token for token in tokens if token.price == 0]
-                
         token_addresses = {
             'GMD': '0xeffae8eb4ca7db99e954adc060b736db78928467',
             'spVARA': '0x489e54eec6c228a1457975eb150a7efb8350b5be',
@@ -66,17 +61,15 @@ class Syncer:
             'CHAM': '0x0fb3e4e84fb78c93e466a2117be7bc8bc063e430',
             'xSHRAP': '0xe1e9db9b4d51a8878f030094f7965edc5eec7802',
             'SHRP': '0x308f66ebee21861d304c8013eb3a9a5fc78a8a6c',
-        }      
+        }
 
         pairs_data = requests.get('https://api.equilibrefinance.com/api/v1/pairs').json()['data']
-        #pairs_data = [p for p in Pair.all()]
-        
         relevant_pairs = [pair for pair in pairs_data if pair['token0']['address'] in token_addresses.values() or pair['token1']['address'] in token_addresses.values()]
 
         for pair in relevant_pairs:
             token0 = pair['token0']
             token1 = pair['token1']
-            
+
             if token0['symbol'] in token_addresses:
                 our_token = token0
                 other_token = token1
@@ -84,22 +77,20 @@ class Syncer:
                 our_token = token1
                 other_token = token0
             else:
-                continue  
-            
-            LOGGER.info(f"Checking price for {our_token['symbol']}: {other_token['symbol']} via  {pair['symbol']}:{pair['address']}")
-            
-            token = Token.find(our_token['address'])
+                continue
 
-            price = token._get_direct_price(Token.find(other_token['address']))
-            
+            LOGGER.info(f"Checking price for {our_token['symbol']}: {other_token['symbol']} via  {pair['symbol']}:{pair['address']}")
+
+            token = Token.objects.get(address=our_token['address'])
+
+            price = token._get_direct_price(Token.objects.get(address=other_token['address']))
+
             token.price = float(price)
-            token.logoURI = our_token['logoURI']
-            token.liquid_staked_address = our_token['liquid_staked_address']
-            
+
             token.save()
-                                    
+
             LOGGER.info(f"Price for {token.symbol}: {token.price} - updated using other token {other_token['symbol']}")
-        
+
         Assets.force_recache()
         LOGGER.info("Assets cache updated")
         

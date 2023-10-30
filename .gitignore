@@ -16,3 +16,5 @@ env
 
 cl/
 app.log
+scripts/json1.txt
+.gitignore
