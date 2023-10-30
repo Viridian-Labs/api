@@ -30,10 +30,8 @@ LOGGER = logging.getLogger(__name__)
 
 # Adding StreamHandler to display logs in the console
 stream_handler = logging.StreamHandler(sys.stdout)
-#stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
-stream_handler.setFormatter(formatter)
 
 
 LOGGER.addHandler(stream_handler)
@@ -106,8 +104,7 @@ SYNC_WAIT_SECONDS = env.int("SYNC_WAIT_SECONDS", default=0)
 CORS_ALLOWED_DOMAINS = env("CORS_ALLOWED_DOMAINS", default=None)
 
 # Get the price from external Source - Defillama
-GET_PRICE_INTERNAL_FIRST = env("GET_PRICE_INTERNAL_FIRST", default=True)
-GET_PRICE_INTERNAL_ONLY = env("GET_PRICE_INTERNAL_ONLY", default=True)
+GET_PRICE_INTERNAL_FIRST = env("GET_PRICE_INTERNAL_FIRST", default=False)
 
 
 DEFAULT_DECIMAL = env("DEFAULT_DECIMAL", default=18)
@@ -116,7 +113,7 @@ LOGGER.setLevel(env("LOG_VERBOSE", default="DEBUG"))
 
 
 TOKEN_CACHE_EXPIRATION = env.int(
-    "TOKEN_CACHE_EXPIRATION", default=120
+    "TOKEN_CACHE_EXPIRATION", default=600
 )  # Default to 120 seconds
 PAIR_CACHE_EXPIRATION = env.int(
     "PAIR_CACHE_EXPIRATION", default=3600

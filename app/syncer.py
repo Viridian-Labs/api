@@ -2,15 +2,16 @@
 
 import time
 import json
+import requests
+from multicall import Call, Multicall
 
 from app.assets import Assets, Token
 from app.pairs import Pairs, Pair
-from app.settings import CACHE, LOGGER, SYNC_WAIT_SECONDS, TOKEN_CACHE_EXPIRATION, reset_multicall_pool_executor
+from app.settings import CACHE, LOGGER, SYNC_WAIT_SECONDS, ROUTER_ADDRESS, reset_multicall_pool_executor
 from app.vara import VaraPrice
 from app.circulating import CirculatingSupply
 from app.configuration import Configuration
-from app.misc import ModelUteis, JSONEncoder
-
+from decimal import Decimal
 
 
 class Syncer:
@@ -52,75 +53,105 @@ class Syncer:
     @staticmethod
     def sync_vara():
         Syncer.sync_with_cache("vara:json", "VARA price", VaraPrice.sync)
+        
+    @staticmethod
+    def sync_special():
+                
+        token_addresses = {
+            'GMD': '0xeffae8eb4ca7db99e954adc060b736db78928467',
+            'spVARA': '0x489e54eec6c228a1457975eb150a7efb8350b5be',
+            'acsVARA': '0x53a5dd07127739e5038ce81eff24ec503a6cc479',
+            'CHAM': '0x0fb3e4e84fb78c93e466a2117be7bc8bc063e430',
+            'xSHRAP': '0xe1e9db9b4d51a8878f030094f7965edc5eec7802',
+            'SHRP': '0x308f66ebee21861d304c8013eb3a9a5fc78a8a6c',
+        }       
 
+        pairs_data = requests.get('https://api.equilibrefinance.com/api/v1/pairs').json()['data']
+        #pairs_data = [p for p in Pair.all()]
+        
+        relevant_pairs = [pair for pair in pairs_data if pair['token0']['address'] in token_addresses.values() or pair['token1']['address'] in token_addresses.values()]
 
+        for pair in relevant_pairs:
+            token0 = pair['token0']
+            token1 = pair['token1']
+            
+            if token0['symbol'] in token_addresses:
+                our_token = token0
+                other_token = token1
+            elif token1['symbol'] in token_addresses:
+                our_token = token1
+                other_token = token0
+            else:
+                continue  
+            
+            LOGGER.info(f"Checking price for {our_token['symbol']}: {other_token['symbol']} via  {pair['symbol']}:{pair['address']}")
+            decimals = our_token['decimals']
+            
+            amount, isStable = Call(
+                        ROUTER_ADDRESS,
+                        [
+                            "getAmountOut(uint256,address,address)(uint256,bool)",
+                            1 * 10**decimals,
+                            other_token['address'],  
+                            our_token['address']     
+                        ]
+                    )()
+                       
+            price = amount / 10**int(other_token['decimals'])        
+            
+            token = Token.find(our_token['address'])
+            token.price = float(price)
+            token.logoURI = our_token['logoURI']
+            token.liquid_staked_address = our_token['liquid_staked_address']
+                        
+            token.save()         
+            
+            LOGGER.info(f"Price for {token.symbol}: {token.price} - Amount {amount}")
+                    
+                                     
 
     @staticmethod
     def sync():
-        # Sync basic data
-        LOGGER.info("Syncing pairs ...")
         t0 = time.time()
+        LOGGER.info("Syncing data...")
 
-        Syncer.sync_tokens()
-        Syncer.sync_pairs()
-        #Syncer.sync_circulating()
-        #Syncer.sync_configuration()
-        #Syncer.sync_supply()
-        #Syncer.sync_vara()
+        #Syncer.sync_tokens()
+        t1 = time.time()
 
-        LOGGER.info("Syncing data done in %s seconds.",  time.time() - t0)
+        #Syncer.sync_pairs()
+        t2 = time.time()
+
+        Syncer.sync_special()
+        t3 = time.time()
+
+        Syncer.sync_circulating()
+        t4 = time.time()
+
+        Syncer.sync_configuration()
+        t5 = time.time()
+
+        Syncer.sync_supply()
+        t6 = time.time()
+
+        Syncer.sync_vara()
+        t7 = time.time()
+
+        LOGGER.info("Syncing tokens data done in %s seconds.", t1 - t0)
+        LOGGER.info("Syncing pairs data done in %s seconds.", t2 - t1)
+        LOGGER.info("Syncing special data done in %s seconds.", t3 - t2)
+        LOGGER.info("Syncing circulating data done in %s seconds.", t4 - t3)
+        LOGGER.info("Syncing configuration data done in %s seconds.", t5 - t4)
+        LOGGER.info("Syncing supply data done in %s seconds.", t6 - t5)
+        LOGGER.info("Syncing vara data done in %s seconds.", t7 - t6)
+        LOGGER.info("Total syncing time: %s seconds.", t7 - t0)
+
+        reset_multicall_pool_executor()
+
         
-        try:
-            LOGGER.debug("Syncing zero-price tokens")            
-            zero_price_tokens = ModelUteis.get_zero_price_tokens()
-            pairs_data = json.loads(CACHE.get("pairs:json").decode('utf-8')).get('data', [])
-            
-            for token in zero_price_tokens:
-                LOGGER.debug(f"Updating price for {token.symbol} through pairs")           
-                
-                best_price = float('inf')
-                for pair_data in pairs_data:
-                    pair = Pair.find(pair_data['address'])
-                    
-                    if token.address not in [pair.token0_address, pair.token1_address]:
-                        continue
-
-                    opposing_token_address = pair.token1_address if token.address == pair.token0_address else pair.token0_address
-                    opposing_token = Token.find(opposing_token_address)
-                    
-                    price_through_tokens = token._get_price_through_tokens([token.address], opposing_token)
-                    direct_price = token._get_direct_price(opposing_token)
-
-                    valid_prices = [price for price in [price_through_tokens, direct_price] if price > 0]
-                    
-                    if valid_prices:
-                        current_best = min(valid_prices)
-                        best_price = min(best_price, current_best)
-                        
-                        LOGGER.debug(f"Price for {token.symbol} is {current_best} through pair {pair.symbol} for token {opposing_token.symbol}")
-
-                if best_price != float('inf'):
-                    token.price = best_price
-
-        except Exception as e:
-            LOGGER.error(f"Error during syncing zero-price tokens: {e}")
-        
-        LOGGER.debug("Updating cache for assets:json")
-
-        serializable_tokens = [tok._data for tok in Token.all()]
-
-        print('serializable_tokens', serializable_tokens)
-
-        CACHE.set("assets:json", json.dumps(dict(data=serializable_tokens), cls=JSONEncoder))
-        CACHE.expire("assets:json", TOKEN_CACHE_EXPIRATION)
-
-        quit(0)
 
     @staticmethod
     def sync_forever():
         LOGGER.info(f"Syncing every {SYNC_WAIT_SECONDS} seconds ...")
-        LOGGER.info("Performing initial sync...")
-        LOGGER.info("Initial sync finished...")
 
         while True:
             try:

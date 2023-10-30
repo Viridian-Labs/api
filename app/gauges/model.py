@@ -4,8 +4,6 @@ from multicall import Call, Multicall
 from walrus import FloatField, HashField, IntegerField, Model, TextField, BooleanField
 from web3.constants import ADDRESS_ZERO
 
-from app.misc import ModelUteis
-
 from app.assets import Token
 from app.settings import (
     CACHE,

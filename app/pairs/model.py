@@ -151,14 +151,7 @@ class Pair(Model):
 
             data["total_supply"] = data["total_supply"] / (10 ** data["decimals"])
 
-            if not Token.is_token_present(data["token0_address"]) and not Token.is_token_present(data["token1_address"]):
-                LOGGER.debug(
-                    "Pair %s:(%s) has no known tokens.",
-                    cls.__name__,
-                    data["symbol"],
-                )
-                return None
-               
+          
             token0 = Token.find(data["token0_address"])
             token1 = Token.find(data["token1_address"])
 

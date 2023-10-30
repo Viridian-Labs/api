@@ -9,7 +9,6 @@ from walrus import BooleanField, FloatField, IntegerField, Model, TextField
 from web3.auto import w3
 from web3.exceptions import ContractLogicError
 from app.misc import ModelUteis
-from app.misc import JSONEncoder
 
 
 from app.settings import (
@@ -26,8 +25,7 @@ from app.settings import (
     STABLE_TOKEN_ADDRESS,
     TOKENLISTS,
     ROUTE_TOKEN_ADDRESSES,
-    RETRY_DELAY,
-    GET_PRICE_INTERNAL_ONLY
+    RETRY_DELAY
 )
 
 DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/tokens/"
@@ -217,7 +215,7 @@ class Token(Model):
             price for the token.
         """
         
-        LOGGER.debug('Finding direct price for token: %s in terms of stablecoin: %s', self.symbol, stablecoin.symbol)
+        #LOGGER.debug('Finding direct price for token: %s in terms of stablecoin: %s', self.symbol, stablecoin.symbol)
 
         try:           
 
@@ -254,7 +252,7 @@ class Token(Model):
         - Logs an error and continues if any exception occurs during blockchain calls, including ContractLogicError.
         """
                 
-        LOGGER.debug('Finding price for token: %s in terms of stablecoin: %s', self.symbol, stablecoin.symbol)
+        #LOGGER.debug('Finding price for token: %s in terms of stablecoin: %s', self.symbol, stablecoin.symbol)
     
         token_addresses = [address for address in token_addresses if address]
 
@@ -377,17 +375,17 @@ class Token(Model):
             return self._finalize_update(0, start_time)
 
         if self.address in AXELAR_BLUECHIPS_ADDRESSES + BLUECHIP_TOKEN_ADDRESSES:
-            LOGGER.debug("Price for %s fetched using External Source", self.symbol)
+            LOGGER.info("Price for %s fetched using External Source", self.symbol)
             return self._finalize_update(self.get_price_external_source(), start_time)
 
         if GET_PRICE_INTERNAL_FIRST:
             LOGGER.debug("Getting price internal first for %s", self.symbol)
             price = self.get_price_internal_source()
             if price > 0:
-                LOGGER.debug("Price for %s fetched using Internal Source", self.symbol)
+                LOGGER.info("Price for %s fetched using Internal Source", self.symbol)
                 return self._finalize_update(price, start_time)
             else:
-                LOGGER.debug("Price for %s fetched using External Source", self.symbol)
+                LOGGER.info("Price for %s fetched using External Source", self.symbol)
                 return self._finalize_update(self.get_price_external_source(), start_time)
         else:
             LOGGER.debug("Getting price internal and external for %s", self.symbol)
@@ -395,18 +393,17 @@ class Token(Model):
             external_price = self.get_price_external_source()
             if internal_price > 0 and external_price > 0:
                 price = (internal_price + external_price) / 2
-                LOGGER.debug(
+                LOGGER.info(
                     "Price for %s fetched using Internal and External Sources", self.symbol
                 )
                 return self._finalize_update(price, start_time)
             elif internal_price > 0:
-                LOGGER.debug("Price for %s fetched using Internal Source", self.symbol)
+                LOGGER.info("Price for %s fetched using Internal Source", self.symbol)
                 return self._finalize_update(internal_price, start_time)
             elif external_price > 0:
-                LOGGER.debug("Price for %s fetched using External Source", self.symbol)
+                LOGGER.info("Price for %s fetched using External Source", self.symbol)
                 return self._finalize_update(external_price, start_time)
 
-        ModelUteis.add_zero_price_token(self)
         return self._finalize_update(0, start_time)       
 
     
@@ -527,7 +524,7 @@ class Token(Model):
         self.price = price
         self.save()
         elapsed_time = time.time() - start_time
-        LOGGER.debug(
+        LOGGER.info(
             "Updated price of %s - %s - Time taken: %s seconds",
             self.symbol,
             self.price,
@@ -544,30 +541,12 @@ class Token(Model):
             return None
         
         try:
-
             address_str = address.decode('utf-8') if isinstance(address, bytes) else address            
-            cached_data_str = CACHE.get("assets:json")            
-            
-            if cached_data_str:
-                cached_data_json = json.loads(cached_data_str)
-
-                for entry in cached_data_json.get('data', []):
-                    if entry.get('address') == address_str:
-                        return cls.create(**entry)
-
-                LOGGER.warning(f"No matching entry found in cache for address: {address_str}")                            
-
-            try:
-                return cls.load(address_str.address.lower()) if hasattr(address_str, 'address') else cls.load(address_str.lower())
-            except KeyError:
-                LOGGER.error("ERROR Fetching %s:%s...", cls.__name__, address_str)
-                return cls.from_chain(address_str.address.lower()) if hasattr(address_str, 'address') else cls.from_chain(address_str.lower())
-                
-
-        except Exception as e:
-            LOGGER.error(f"Error fetching {cls.__name__} data from chain: {e}")
-            return None
-
+            return cls.load(address_str.address.lower()) if hasattr(address_str, 'address') else cls.load(address_str.lower())
+        except KeyError:
+            LOGGER.info(f"Key {address_str} not found in cache. Fetching from chain...")
+            return cls.from_chain(address_str.address.lower()) if hasattr(address_str, 'address') else cls.from_chain(address_str.lower())
+                        
 
     @classmethod
     def from_tokenlists(cls):
@@ -578,18 +557,7 @@ class Token(Model):
         all_tokens = cls._fetch_all_tokens(our_chain_id)
         
         return all_tokens
-    
 
-    @classmethod
-    def get_all_tokens(cls):
-        """
-        Fetch all tokens from the cache.
-
-        :return: A list of token data if the cache has them; otherwise, returns None.
-        """
-
-        assets = CACHE.get("tokenList:json") 
-        return json.loads(assets) if assets else None
 
     @classmethod
     def is_token_present(cls, address):
@@ -661,19 +629,21 @@ class Token(Model):
         return tokens
 
     @staticmethod
-    def _is_valid_token(
-        token_data: Dict[str, Union[str, int]], our_chain_id: int
-    ) -> bool:
+    def _is_valid_token(token_data: Dict[str, Union[str, int]], our_chain_id: int) -> bool:
+        """Validates if the token is from the correct chain and not in the ignored list."""
         
-        """Validates if the token is from the correct chain and not in
-        the ignored list."""
-
         address = token_data.get("address", "").lower()
+        
+        # Fetch all tokens (assuming Token.all() returns all tokens).
+        all_tokens = Token.all()
+     
+
         return (
             token_data.get("chainId") == our_chain_id
             and address not in IGNORED_TOKEN_ADDRESSES
             and address
         )
+
 
     @classmethod
     def _create_and_update_token(

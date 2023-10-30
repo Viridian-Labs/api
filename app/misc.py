@@ -32,47 +32,8 @@ class ModelUteis:
         if token.decimals is None:
             token.decimals = 18
 
-        token.save()
-
-    @staticmethod
-    def add_zero_price_token(token):
-        """
-        Add a token to the zero_price_tokens list if it's not already present.
-
-        :param token: Token object with zero price.
-        """
-        if token.address not in ModelUteis.zero_price_token_addresses:
-            ModelUteis.zero_price_token_addresses.add(token.address)
-            ModelUteis.zero_price_tokens.append(token)
-
-    @staticmethod
-    def get_zero_price_tokens():
-        """
-        Return the list of zero price tokens.
-
-        :return: List of zero price tokens.
-        """
-        return ModelUteis.zero_price_tokens
-
-    @staticmethod
-    def add_not_alive_gauge(gauge):
-        """
-        Add a gauge to the not_alive_gauges list if it's not already present.
-
-        :param gauge: Gauge object which is not alive.
-        """
-        if gauge.address not in ModelUteis.not_alive_gauge_addresses:
-            ModelUteis.not_alive_gauge_addresses.add(gauge.address)
-            ModelUteis.not_alive_gauges.append(gauge)
-
-    @staticmethod
-    def get_not_alive_gauge():
-        """
-        Return the list of gauges which are not alive.
-
-        :return: List of not-alive gauges.
-        """
-        return ModelUteis.not_alive_gauges
+        token.save()    
+   
 
     @staticmethod
     def validate_token(decimals):

@@ -4,12 +4,10 @@ import json
 
 import falcon
 
-import time
-from multiprocessing import Process
 from multiprocessing.pool import ThreadPool
 
 from web3 import Web3
-from app.assets import Assets, Token
+from app.assets import Token
 from app.gauges import Gauge
 from app.misc import JSONEncoder
 from app.settings import CACHE, LOGGER, reset_multicall_pool_executor
@@ -28,9 +26,6 @@ class Pairs(object):
     @classmethod
     def sync(cls):
         
-        LOGGER.info("Syncing pairs ...")
-        t0 = time.time()
-
         addresses = Pair.chain_addresses()
 
         previous_addresses_str = CACHE.get(cls.ADDRESSES_CACHE_KEY)
@@ -54,8 +49,6 @@ class Pairs(object):
 
         Pairs.recache() 
         
-        LOGGER.info("Syncing pairs done in %s seconds.", time.time() - t0)
-
         reset_multicall_pool_executor()
 
 
