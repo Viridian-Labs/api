@@ -81,9 +81,9 @@ class Syncer:
 
             LOGGER.info(f"Checking price for {our_token['symbol']}: {other_token['symbol']} via  {pair['symbol']}:{pair['address']}")
 
-            token = Token.objects.get(address=our_token['address'])
+            token = Token.find(our_token['address'])
 
-            price = token._get_direct_price(Token.objects.get(address=other_token['address']))
+            price = token._get_direct_price(Token.find(other_token['address']))
 
             token.price = float(price)
 
