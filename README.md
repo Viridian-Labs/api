@@ -28,8 +28,8 @@ The Price Strategy is engineered to meticulously fetch the most accurate and rel
 
 1. **Classification of Data Sources**:
    - Primarily, two data sources are harnessed: internal contracts and external data from reputable APIs like Coingecko, DeFiLlama, and Debank.
-   - Setting `GET_PRICE_INTERNAL_FIRST=True` in the `.env` file prioritizes fetching prices internally for more precise pricing derived from your blockchain. Initially, the script explores contracts utilizing token pairs and adjustable internal routes. Should no price be identified, the external data source is engaged, probing for liquidity on corresponding pairs and liquidity staked addresses.
-   - Note: Fetching from internal sources may extend the synchronization time.
+   - Setting `GET_PRICE_INTERNAL_FIRST=True` in the `.env` file prioritizes fetching prices internally for more precise pricing derived from  blockchain. Initially, the script explores contracts utilizing token pairs and adjustable internal routes. Should no price be identified, the external data source is engaged, probing for liquidity on corresponding pairs and liquidity staked addresses.
+   - Note: Fetching from internal sources only may extend the synchronization time.
 
 2. **Determining the Order of Sources**:
    - The `GET_PRICE_INTERNAL_FIRST` configuration guides the strategy in prioritizing either internal or external sources.
@@ -59,7 +59,7 @@ The `_update_price` method orchestrates the process of updating a blockchain tok
     - If the token resides in the `IGNORED_TOKEN_ADDRESSES` list, an error is logged, and the update concludes with a price of 0.
 
 - **Price Control Verification**:
-    - If `price_control` is set for the token, it attempts to fetch the price using a method specified by `price_control`. If the method exists, it updates the price; otherwise, an error is logged, and the price is set to 0.
+    - If price_control is designated for the token, the system endeavors to retrieve the price utilizing a method specified by price_control. Should the method exist, the price is updated; otherwise, an informational message is logged, the price is set to 0, and the price flow progresses.
 
 - **External Source Verification for Special Addresses**:
     - If the token address is in a list of special addresses (`AXELAR_BLUECHIPS_ADDRESSES` or `BLUECHIP_TOKEN_ADDRESSES`), the method fetches the price from an external source.
