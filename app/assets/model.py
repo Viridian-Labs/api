@@ -69,6 +69,7 @@ class Token(Model):
     created_at = FloatField(default=w3.eth.get_block("latest").timestamp)
     taxed = BooleanField(default=False)
     tax = FloatField(default=0)
+    price_control = TextField()
 
     DEXSCREENER_ENDPOINT = DEXSCREENER_ENDPOINT
     DEFILLAMA_ENDPOINT = DEFILLAMA_ENDPOINT
@@ -373,7 +374,28 @@ class Token(Model):
                 "Token %s is in the ignored list. Skipping update.", self.symbol
             )
             return self._finalize_update(0, start_time)
+        
+        
+        if self.price_control:
+            
+            LOGGER.info("Token %s has price_control. Fetching price using %s", self.symbol, self.price_control)
+            
+            try:
+                if self.price_control in dir(self):
+                    self.price = getattr(self, self.price_control)()
+                    return self._finalize_update(self.price, start_time)
+                else:
+                    LOGGER.error(
+                        "Token %s has price_control but the function %s does not exists. Skipping update.", self.symbol, self.price_control
+                    )
+                    self.price = 0
+            except Exception as e:
+                LOGGER.error(
+                    "Token %s has price_control but the function %s has error: %s. Skipping update.", self.symbol, self.price_control, e
+                )
+                self.price = 0
 
+        
         if self.address in AXELAR_BLUECHIPS_ADDRESSES + BLUECHIP_TOKEN_ADDRESSES:
             LOGGER.info("Price for %s fetched using External Source", self.symbol)
             return self._finalize_update(self.get_price_external_source(), start_time)
@@ -383,24 +405,24 @@ class Token(Model):
             LOGGER.debug("Getting price internal first for %s", self.symbol)
             price = self.get_price_internal_source()
             if price > 0:
-                LOGGER.info("Price for %s fetched using Internal Source", self.symbol)
+                LOGGER.info("Price for %s fetched using Internal Source. Price $%s", self.symbol, price)
                 return self._finalize_update(price, start_time)
             else:
-                LOGGER.info("Price for %s fetched using External Source", self.symbol)
+                LOGGER.info("Price for %s fetched using External Source. Price $%s", self.symbol, price)
                 return self._finalize_update(self.get_price_external_source(), start_time)
         else:
-            LOGGER.debug("Getting price internal and external for %s", self.symbol)
+            LOGGER.debug("Getting price internal and external for %s.", self.symbol)
             
             external_price = self.get_price_external_source()
             
             if external_price > 0:
-                LOGGER.info("Price for %s fetched using External Source", self.symbol)
+                LOGGER.info("Price for %s fetched using External Source. Price $%s", self.symbol, external_price)
                 return self._finalize_update(external_price, start_time)
             
             internal_price = self.get_price_internal_source()
             
             if internal_price > 0:
-                LOGGER.info("Price for %s fetched using Internal Source", self.symbol)
+                LOGGER.info("Price for %s fetched using Internal Source. Price $%s", self.symbol, internal_price)
                 return self._finalize_update(internal_price, start_time)
                                     
 
@@ -414,7 +436,44 @@ class Token(Model):
             self.price = self.temporary_price_in_bluechips()
             
             
-        return self._finalize_update(0, start_time)       
+        return self._finalize_update(0, start_time)   
+      
+    
+    def chain_price_in_bluechips(self):
+        """Returns the price quoted from our router in stables/USDC
+        passing through a bluechip route"""
+        # Peg it forever.
+        if self.address == STABLE_TOKEN_ADDRESS:
+            return 1.0
+        # LOGGER.debug("Chain price Bluechips for %s", self.symbol)
+        stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
+        for b in BLUECHIP_TOKEN_ADDRESSES:
+            try:
+                bluechip = Token.find(b)
+                amountA, is_stable = Call(
+                    ROUTER_ADDRESS,
+                    [
+                        "getAmountOut(uint256,address,address)(uint256,bool)",
+                        1 * 10**self.decimals,
+                        self.address,
+                        bluechip.address,
+                    ],
+                )()
+                amountB, is_stable = Call(
+                    ROUTER_ADDRESS,
+                    [
+                        "getAmountOut(uint256,address,address)(uint256,bool)",
+                        amountA,
+                        bluechip.address,
+                        stablecoin.address,
+                    ],
+                )()
+                if amountB > 0:
+                    return amountB / 10**stablecoin.decimals
+            except ContractLogicError:
+                return 0
+
+        return 0  
     
     
     def chain_price_in_liquid_staked(self):
@@ -423,11 +482,13 @@ class Token(Model):
         # Peg it forever.
         if self.address == STABLE_TOKEN_ADDRESS:
             return 1.0
-        # LOGGER.debug("Chain price Liquid Staked for %s", self.symbol)
+        
+        LOGGER.debug("Chain price Liquid Staked for %s", self.symbol)
         stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
-
+        
         try:
             liquid = Token.find(self.liquid_staked_address)
+            
             if not liquid:
                 return 0
             amountA, is_stable = Call(
@@ -461,6 +522,42 @@ class Token(Model):
         return mToken.price
     
     
+    def chain_price_in_pairs(self):
+        """Returns the price quoted from our router passing through a pair route"""
+        
+        try:
+            pairs_data = requests.get('https://api.equilibrefinance.com/api/v1/pairs').json()['data']            
+        except Exception as e:
+            LOGGER.error(f"Failed to fetch pair data: {e}")
+            return None
+
+        relevant_pairs = [p for p in pairs_data if self.address in [p['token0']['address'], p['token1']['address']]]
+        price = 0
+        
+        for pair in relevant_pairs:
+            token0 = pair['token0']
+            token1 = pair['token1']
+            
+            if token0['address'] in self.address:
+                our_token = token0
+                other_token = token1
+            elif token1['address'] in self.address:
+                our_token = token1
+                other_token = token0
+            else:
+                continue
+            
+            LOGGER.info(f"Checking price for {our_token['symbol']}: {other_token['symbol']} via  {pair['symbol']}:{pair['address']}")
+
+            price = self._get_direct_price(Token.find(other_token['address']))
+        
+            LOGGER.info(f'Saving data for token {self.symbol}: {self._data}')
+            LOGGER.info(f"Price for {self.symbol}: {price} - updated using other token {other_token['symbol']}")
+
+
+        return price
+        
+        
     @classmethod
     def from_chain(cls, address, logoURI=None):
 
@@ -723,6 +820,7 @@ class Token(Model):
         token.stable = True if "stablecoin" in tags[0] else False
         token.taxed = True if len(tags) > 1 and isinstance(tags[1], str) and "taxed" in tags[1] else False
         token.tax = token_data.get("tax", False)
+        token.price_control = token_data.get("price_control", "")
         token._update_price()
         return token
 

@@ -51,52 +51,7 @@ class Syncer:
     @staticmethod
     def sync_vara():
         Syncer.sync_with_cache("vara:json", "VARA price", VaraPrice.sync)
-        
-    @staticmethod
-    def sync_special():
-        token_addresses = {
-            'GMD': '0xeffae8eb4ca7db99e954adc060b736db78928467',
-            'spVARA': '0x489e54eec6c228a1457975eb150a7efb8350b5be',
-            'acsVARA': '0x53a5dd07127739e5038ce81eff24ec503a6cc479',
-            'CHAM': '0x0fb3e4e84fb78c93e466a2117be7bc8bc063e430',
-            'xSHRAP': '0xe1e9db9b4d51a8878f030094f7965edc5eec7802',
-            'SHRP': '0x308f66ebee21861d304c8013eb3a9a5fc78a8a6c',
-        }
-
-        pairs_data = requests.get('https://api.equilibrefinance.com/api/v1/pairs').json()['data']
-        relevant_pairs = [pair for pair in pairs_data if pair['token0']['address'] in token_addresses.values() or pair['token1']['address'] in token_addresses.values()]
-
-        for pair in relevant_pairs:
-            token0 = pair['token0']
-            token1 = pair['token1']
-
-            if token0['symbol'] in token_addresses:
-                our_token = token0
-                other_token = token1
-            elif token1['symbol'] in token_addresses:
-                our_token = token1
-                other_token = token0
-            else:
-                continue
-
-            LOGGER.info(f"Checking price for {our_token['symbol']}: {other_token['symbol']} via  {pair['symbol']}:{pair['address']}")
-
-            token = Token.find(our_token['address'])
-
-            price = token._get_direct_price(Token.find(other_token['address']))
-
-            token.price = float(price)
-
-            token.save()
-
-            LOGGER.info(f"Price for {token.symbol}: {token.price} - updated using other token {other_token['symbol']}")
-
-        Assets.force_recache()
-        LOGGER.info("Assets cache updated")
-        
-                    
-                                     
-
+                                                                     
     @staticmethod
     def sync():
         t0 = time.time()
@@ -107,9 +62,6 @@ class Syncer:
 
         Syncer.sync_pairs()
         t2 = time.time()
-
-        Syncer.sync_special()
-        t3 = time.time()
 
         Syncer.sync_circulating()
         t4 = time.time()
@@ -125,14 +77,13 @@ class Syncer:
 
         LOGGER.info("Syncing tokens data done in %s seconds.", t1 - t0)
         LOGGER.info("Syncing pairs data done in %s seconds.", t2 - t1)
-        LOGGER.info("Syncing special data done in %s seconds.", t3 - t2)
-        LOGGER.info("Syncing circulating data done in %s seconds.", t4 - t3)
+        LOGGER.info("Syncing circulating data done in %s seconds.", t4 - t2)
         LOGGER.info("Syncing configuration data done in %s seconds.", t5 - t4)
         LOGGER.info("Syncing supply data done in %s seconds.", t6 - t5)
         LOGGER.info("Syncing vara data done in %s seconds.", t7 - t6)
         LOGGER.info("Total syncing time: %s seconds.", t7 - t0)
 
-        reset_multicall_pool_executor()
+        reset_multicall_pool_executor()        
 
         
 

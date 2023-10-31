@@ -14,7 +14,7 @@ env
 # IDE
 .idea
 
-cl/
 app.log
 scripts/json1.txt
+scripts/json2.txt
 .gitignore
