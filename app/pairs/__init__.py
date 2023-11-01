@@ -63,6 +63,12 @@ class Pairs(object):
         pairs = []
 
         for pair in Pair.all():
+            
+            if pair is None or pair._data is None:
+                print('### Pair is None')
+                continue
+            
+            
             data = pair._data            
 
             token0 = Token.find(pair.token0_address.decode('utf-8')) if isinstance(pair.token0_address, bytes) else Token.find(pair.token0_address)
@@ -73,20 +79,23 @@ class Pairs(object):
             if token1:
                 data["token1"] = token1.to_dict()
 
+            print('### Searching gauges ....')
+            
             if pair.gauge_address:
                 gauge = Gauge.find(pair.gauge_address)
-                data["gauge"] = gauge._data
-                data["gauge"]["bribes"] = []
-
-                for (token_addr, reward_ammount) in gauge.rewards:
-                    data["gauge"]["bribes"].append(
-                        dict(
-                            token=Token.find(token_addr).to_dict(),
-                            reward_ammount=float(reward_ammount),
-                            # TODO: Backwards compat...
-                            rewardAmmount=float(reward_ammount),
+                
+                if gauge and gauge._data is not None:
+                    data["gauge"] = gauge._data
+                    data["gauge"]["bribes"] = []
+                    
+                    for (token_addr, reward_ammount) in gauge.rewards:
+                        data["gauge"]["bribes"].append(
+                            dict(
+                                token=Token.find(token_addr).to_dict(),
+                                reward_ammount=float(reward_ammount),
+                                
+                            )
                         )
-                    )
 
             pairs.append(data)
 

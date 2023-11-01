@@ -405,10 +405,10 @@ class Token(Model):
             LOGGER.debug("Getting price internal first for %s", self.symbol)
             price = self.get_price_internal_source()
             if price > 0:
-                LOGGER.info("Price for %s fetched using Internal Source. Price $%s", self.symbol, price)
+                LOGGER.info("Price for %s fetched using Internal Source. Price %s", self.symbol, price)
                 return self._finalize_update(price, start_time)
             else:
-                LOGGER.info("Price for %s fetched using External Source. Price $%s", self.symbol, price)
+                LOGGER.info("Price for %s fetched using External Source. Price %s", self.symbol, price)
                 return self._finalize_update(self.get_price_external_source(), start_time)
         else:
             LOGGER.debug("Getting price internal and external for %s.", self.symbol)
@@ -416,13 +416,13 @@ class Token(Model):
             external_price = self.get_price_external_source()
             
             if external_price > 0:
-                LOGGER.info("Price for %s fetched using External Source. Price $%s", self.symbol, external_price)
+                LOGGER.info("Price for %s fetched using External Source. Price %s", self.symbol, external_price)
                 return self._finalize_update(external_price, start_time)
             
             internal_price = self.get_price_internal_source()
             
             if internal_price > 0:
-                LOGGER.info("Price for %s fetched using Internal Source. Price $%s", self.symbol, internal_price)
+                LOGGER.info("Price for %s fetched using Internal Source. Price %s", self.symbol, internal_price)
                 return self._finalize_update(internal_price, start_time)
                                     
 
@@ -761,7 +761,7 @@ class Token(Model):
         """Fetches tokens from a specific token list."""
 
         tokens = []
-              
+                      
         try:
             res = requests.get(tlist).json()
             for token_data in res.get("tokens", []):
@@ -784,11 +784,7 @@ class Token(Model):
         """Validates if the token is from the correct chain and not in the ignored list."""
         
         address = token_data.get("address", "").lower()
-        
-        # Fetch all tokens (assuming Token.all() returns all tokens).
-        all_tokens = Token.all()
-     
-
+         
         return (
             token_data.get("chainId") == our_chain_id
             and address not in IGNORED_TOKEN_ADDRESSES
@@ -821,6 +817,8 @@ class Token(Model):
         token.taxed = True if len(tags) > 1 and isinstance(tags[1], str) and "taxed" in tags[1] else False
         token.tax = token_data.get("tax", False)
         token.price_control = token_data.get("price_control", "")
+        token.decimals = token_data.get("decimals", 18)
+                
         token._update_price()
         return token
 

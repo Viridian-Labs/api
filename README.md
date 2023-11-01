@@ -131,7 +131,7 @@ The application periodically syncs data points like tokens, pairs, and VARA pric
 1. **Tokens**: Checks cache validity (`assets:json`). If expired, fetches and updates the token list.
 2. **Pairs**: Checks cache validity (`pairs:json`). If expired, fetches and updates the pairs data using potential multi-threading.
 3. **VARA Price**: Checks cache validity (`vara:json`). If expired, fetches and updates the VARA price.
-4. **Circulating Supply**: Verifies cache validity (supply:string). If the cache is outdated, it fetches and updates the circulating supply.
+4. **Circulating Supply**: Verifies cache validity (circulating:string). If the cache is outdated, it fetches and updates the circulating supply.
 5. **Configuration**: Verifies cache validity (volume:json). If the cache is outdated, it fetches and updates the configuration, ensuring the dexscreener data isn't calculated in every call.
 
 The `sync` function orchestrates the synchronization, while `sync_forever` ensures continuous synchronization at intervals set by `SYNC_WAIT_SECONDS`.

@@ -42,13 +42,9 @@ class Gauge(Model):
     tbv = FloatField(default=0.0)
     votes = FloatField(default=0.0)
     apr = FloatField(default=0.0)
-    isAlive = BooleanField(default=False)
-    
-
-    # Backwards compatibility fields
-    bribeAddress = TextField()
-    feesAddress = TextField()
-    totalSupply = FloatField()  
+    isAlive = BooleanField(default=False)    
+    total_fees = FloatField(default=0.0)
+    total_bribes = FloatField(default=0.0)
 
     @classmethod
     def find(cls, address):
@@ -107,6 +103,7 @@ class Gauge(Model):
 
             if not data.get("isAlive"):
                 LOGGER.warning(f"Gauge {address} is not Alive.")
+                return None
             
             data["total_supply"] = data["total_supply"] / cls.DEFAULT_DECIMALS
 
@@ -126,14 +123,11 @@ class Gauge(Model):
                 try:
                     if data.get("bribe_address") in (ADDRESS_ZERO, None):
                         LOGGER.warning(f"No bribe address data for address {address}")
-                        data["bribeAddress"] = ADDRESS_ZERO
-                        data["feesAddress"] = 0
-                        data["totalSupply"] = 0
+                        data["bribe_address"] = ADDRESS_ZERO
+                        data["fees_address"] = ADDRESS_ZERO
+                        data["total_supply"] = 0
                     else:
-                        data["bribeAddress"] = data["bribe_address"]
-                        data["feesAddress"] = data["fees_address"]
-                        data["totalSupply"] = data["total_supply"]
-
+                        
                         if data.get("bribe_address") not in (ADDRESS_ZERO, None):
                             data["wrapped_bribe_address"] = Call(
                                 WRAPPED_BRIBE_FACTORY_ADDRESS,
@@ -239,6 +233,7 @@ class Gauge(Model):
                 )
 
             rewards_data = Multicall(reward_calls)()
+            gauge.total_bribes = 0
 
             for bribe_token_address, amount in rewards_data.items():
 
@@ -250,12 +245,18 @@ class Gauge(Model):
 
                 if token is not None:
                     
-                    LOGGER.debug("Bribe token found %s: %s %s.", cls.__name__, token.symbol, token.address)
-                
-                    gauge.rewards[token.address] = amount / 10**token.decimals
+                    token_bribes = amount / 10**token.decimals
+                    gauge.rewards[token.address] = token_bribes
+                    
+                    
+                    print('1111111111111', gauge.total_bribes)
+                    gauge.total_bribes += token_bribes
+                    print('2222222222222', gauge.total_bribes)
+                    
+                    LOGGER.debug("Bribe token found %s: %s %s.", cls.__name__, token.symbol, token_bribes)
 
                     if token.price:
-                        gauge.tbv += amount / 10**token.decimals * token.price         
+                        gauge.tbv += token_bribes * token.price         
 
             gauge.save()
         except Exception as e:
@@ -295,14 +296,18 @@ class Gauge(Model):
                 token_address_str = token_address.decode('utf-8') if isinstance(token_address, bytes) else token_address            
 
                 token = Token.find(token_address_str)
+                token_fees= fee / 10**token.decimals
+                gauge.total_fees += token_fees
 
                 if gauge.rewards.get(token_address):
                     gauge.rewards[token_address] = float(
                         gauge.rewards[token_address]
-                    ) + (fee / 10**token.decimals)
+                    ) + token_fees
                 elif fee > 0:
-                    gauge.rewards[token_address] = fee / 10**token.decimals
-
+                    gauge.rewards[token_address] = token_fees
+                                        
+                    LOGGER.debug("Fees token found %s: %s %s.", cls.__name__, token.symbol, fee)
+                    
                 if token.price:
                     gauge.tbv += fee / 10**token.decimals * token.price
 

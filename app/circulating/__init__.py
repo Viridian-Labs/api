@@ -11,7 +11,7 @@ from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER, SUPPLY_CACHE_EXP
 class CirculatingSupply:
     """Handles supply info"""
 
-    CACHE_KEY = "supply:string"
+    CACHE_KEY = "circulating:string"
 
     @classmethod
     def sync(cls):       
@@ -60,7 +60,7 @@ class CirculatingSupply:
         
         serializable_tokens=data["circulating_supply"]
         CACHE.set(cls.CACHE_KEY, serializable_tokens)
-        CACHE.expire("supply:string", SUPPLY_CACHE_EXPIRATION)
+        CACHE.expire("circulating:string", SUPPLY_CACHE_EXPIRATION)
 
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)
         return data["circulating_supply"]

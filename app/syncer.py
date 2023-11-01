@@ -34,7 +34,7 @@ class Syncer:
 
     @staticmethod
     def sync_circulating():
-        Syncer.sync_with_cache("supply:string", "circulating supply", CirculatingSupply.sync)
+        Syncer.sync_with_cache("circulating:string", "circulating supply", CirculatingSupply.sync)
 
     @staticmethod
     def sync_configuration():
@@ -84,6 +84,7 @@ class Syncer:
         LOGGER.info("Total syncing time: %s seconds.", t7 - t0)
 
         reset_multicall_pool_executor()        
+        quit(0)
 
         
 
