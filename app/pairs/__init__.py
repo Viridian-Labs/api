@@ -48,7 +48,7 @@ class Pairs(object):
             pool.join()
 
         Pairs.recache() 
-        
+                        
         reset_multicall_pool_executor()
 
 
@@ -65,7 +65,6 @@ class Pairs(object):
         for pair in Pair.all():
             
             if pair is None or pair._data is None:
-                print('### Pair is None')
                 continue
             
             
@@ -78,8 +77,6 @@ class Pairs(object):
                 data["token0"] = token0.to_dict()
             if token1:
                 data["token1"] = token1.to_dict()
-
-            print('### Searching gauges ....')
             
             if pair.gauge_address:
                 gauge = Gauge.find(pair.gauge_address)
