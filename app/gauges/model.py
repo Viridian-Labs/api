@@ -233,7 +233,6 @@ class Gauge(Model):
                 )
 
             rewards_data = Multicall(reward_calls)()
-            gauge.total_bribes = 0
 
             for bribe_token_address, amount in rewards_data.items():
 
@@ -246,12 +245,8 @@ class Gauge(Model):
                 if token is not None:
                     
                     token_bribes = amount / 10**token.decimals
-                    gauge.rewards[token.address] = token_bribes
-                    
-                    
-                    print('1111111111111', gauge.total_bribes)
+                    gauge.rewards[token.address] = token_bribes                                        
                     gauge.total_bribes += token_bribes
-                    print('2222222222222', gauge.total_bribes)
                     
                     LOGGER.debug("Bribe token found %s: %s %s.", cls.__name__, token.symbol, token_bribes)
 

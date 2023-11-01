@@ -61,7 +61,9 @@ class Supply(object):
 
         supply_data = json.dumps(dict(data=data))
 
-        CACHE.setex(cls.CACHE_KEY, cls.CACHE_TIME, supply_data)
+        CACHE.set(cls.CACHE_KEY, supply_data)
+        CACHE.expire(cls.CACHE_KEY, cls.CACHE_TIME)
+
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)
 
         return supply_data

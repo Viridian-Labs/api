@@ -84,8 +84,6 @@ class Syncer:
         LOGGER.info("Total syncing time: %s seconds.", t7 - t0)
 
         reset_multicall_pool_executor()        
-        quit(0)
-
         
 
     @staticmethod
