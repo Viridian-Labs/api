@@ -35,7 +35,9 @@ class Pair(Model):
     totalSupply = FloatField()
 
     def syncup_gauge(self, retry_count=RETRY_COUNT, retry_delay=RETRY_DELAY):
-        """Fetches and updates the gauge data associated with this pair from the blockchain."""
+        """Fetches and updates the gauge data associated
+        with this pair from the blockchain."""
+
         if self.gauge_address in (ADDRESS_ZERO, None):
             return
 
@@ -52,7 +54,7 @@ class Pair(Model):
                 return gauge
             except Exception as e:
                 LOGGER.error(
-                    f"Error fetching gauge data from chain for address {self.address}: {e}"
+                    f"Error fetching gauge for address {self.address}: {e}"
                 )
                 LOGGER.info(f"Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
@@ -60,8 +62,6 @@ class Pair(Model):
         return None
 
     def _update_apr(self, gauge):
-
-        """Calculates and updates the annual percentage rate (APR) for this pair based on its total value locked (TVL) and the associated gauge data."""
 
         if self.tvl == 0:
             return
@@ -78,8 +78,6 @@ class Pair(Model):
     @classmethod
     def find(cls, address):
 
-        """Attempts to load a Pair instance from the cache based on its address, or fetches it from the blockchain if not found in cache."""
-
         if address is None:
             return None
 
@@ -90,8 +88,6 @@ class Pair(Model):
 
     @classmethod
     def chain_addresses(cls):
-
-        """Fetches all pair addresses from the blockchain."""
 
         pairs_count = Call(FACTORY_ADDRESS, "allPairsLength()(uint256)")()
 
@@ -110,8 +106,6 @@ class Pair(Model):
 
     @classmethod
     def from_chain(cls, address):
-
-        """Fetches a pair's data from the blockchain based on its address, and updates or creates the corresponding Pair instance in the database."""
 
         try:
             address = address.lower()
@@ -190,14 +184,12 @@ class Pair(Model):
 
         except Exception as e:
             LOGGER.error(
-                f"Error fetching pair data from chain for address {address}: {e}"
+                f"Error fetching pair for address {address}: {e}"
             )
             return None
 
     @classmethod
     def _tvl(cls, pool_data, token0, token1):
-
-        """Calculates and returns the total value locked (TVL) in a given pool, based on the reserves and prices of its tokens."""
 
         try:
             tvl = 0
@@ -230,7 +222,7 @@ class Pair(Model):
 
         except Exception as e:
             LOGGER.error(
-                f"Error calculating TVL for pool {pool_data.get('symbol')}: {e}"
+                f"Error TVL for pool {pool_data.get('symbol')}: {e}"
             )
             return 0
 
@@ -246,7 +238,7 @@ class Pair(Model):
 
         except Exception as e:
             LOGGER.error(
-                f"Error fetching balance for token {token_address} in pair {self.address}: {e}"
+                f"Error fetching balance {token_address} {self.address}: {e}"
             )
             return 0
 

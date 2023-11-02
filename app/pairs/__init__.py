@@ -55,8 +55,8 @@ class Pairs(object):
     def serialize(cls):
 
         """
-        Serializes the list of Pair objects along with related Token and Gauge data
-        into a list of dictionaries.
+        Serializes the list of Pair objects along with related Token
+        and Gauge data into a list of dictionaries.
         """
 
         pairs = []

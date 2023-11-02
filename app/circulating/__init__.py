@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import json
-
 import falcon
 from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER,
                           SUPPLY_CACHE_EXPIRATION, TREASURY_ADDRESS,

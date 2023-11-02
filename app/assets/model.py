@@ -205,8 +205,6 @@ class Token(Model):
             price for the token.
         """
 
-        # LOGGER.debug('Finding direct price for token: %s in terms of stablecoin: %s', self.symbol, stablecoin.symbol)
-
         try:
 
             amount, is_stable = Call(
@@ -224,24 +222,6 @@ class Token(Model):
             return 0
 
     def _get_price_through_tokens(self, token_addresses, stablecoin):
-
-        """
-        Calculate the total price of specified tokens in terms of a given routing token.
-
-        Parameters:
-        - token_addresses (list): A list of Ethereum addresses of the tokens.
-        - stablecoin (object): An object representing the stablecoin, containing its address and decimal places.
-
-        Returns:
-        - total_price (float): The total price of the specified tokens in terms of the given stablecoin.
-
-        Errors:
-        - Logs an error and returns 0 if the token_addresses parameter is not a list.
-        - Logs an error and continues if any token address is invalid or any unexpected result type is encountered during blockchain calls.
-        - Logs an error and continues if any exception occurs during blockchain calls, including ContractLogicError.
-        """
-
-        # LOGGER.debug('Finding price for token: %s in terms of stablecoin: %s', self.symbol, stablecoin.symbol)
 
         token_addresses = [address for address in token_addresses if address]
 
@@ -297,7 +277,7 @@ class Token(Model):
 
                 if not isinstance(result, tuple):
                     LOGGER.error(
-                        f"Unexpected result type for {token_address} in first call. Expected tuple but got {type(result)}"
+                        f"Unexpected result type for {token_address}    "
                     )
                     continue
 
@@ -315,7 +295,7 @@ class Token(Model):
 
                 if not isinstance(result, tuple):
                     LOGGER.error(
-                        f"Unexpected result type for {token_address} in second call. Expected tuple but got {type(result)}"
+                        f"Unexpected result type for {token_address}"
                     )
                     continue
 
@@ -339,24 +319,12 @@ class Token(Model):
                 time.sleep(RETRY_DELAY)
             else:
                 LOGGER.error(
-                    f"Max retries reached. Unable to fetch data for {token_address}"
+                    f"Unable to fetch data for {token_address}"
                 )
                 return 0
 
     def _update_price(self):
-        """
-        Updates the price of the token by fetching it from the defined internal
-        and external sources.
-        The order of fetching and the sources are defined in
-        GET_PRICE_INTERNAL_FIRST, INTERNAL_PRICE_ORDER
-        and EXTERNAL_PRICE_ORDER.
 
-        Returns:
-            float: The updated price of the token, 0 if updating fails.
-
-        Raises:
-            Exception: Any exception raised by the price fetching methods.
-        """
         start_time = time.time()
         ModelUteis.ensure_token_validity(self)
 
@@ -381,16 +349,13 @@ class Token(Model):
                     return self._finalize_update(self.price, start_time)
                 else:
                     LOGGER.error(
-                        "Token %s has price_control but the function %s does not exists. Skipping update.",
-                        self.symbol,
-                        self.price_control,
+                        "Error on %s has price_control",
+                        self.symbol
                     )
                     self.price = 0
             except Exception as e:
                 LOGGER.error(
-                    "Token %s has price_control but the function %s has error: %s. Skipping update.",
-                    self.symbol,
-                    self.price_control,
+                    "The function %s has error: %s",
                     e,
                 )
                 self.price = 0
@@ -543,7 +508,6 @@ class Token(Model):
         return mToken.price
 
     def chain_price_in_pairs(self):
-        """Returns the price quoted from our router passing through a pair route"""
 
         try:
             pairs_data = requests.get(
@@ -565,24 +529,15 @@ class Token(Model):
             token1 = pair["token1"]
 
             if token0["address"] in self.address:
-                our_token = token0
                 other_token = token1
             elif token1["address"] in self.address:
-                our_token = token1
                 other_token = token0
             else:
                 continue
 
-            LOGGER.info(
-                f"Checking price for {our_token['symbol']}: {other_token['symbol']} via  {pair['symbol']}:{pair['address']}"
-            )
-
             price = self._get_direct_price(Token.find(other_token["address"]))
 
             LOGGER.info(f"Saving data for token {self.symbol}: {self._data}")
-            LOGGER.info(
-                f"Price for {self.symbol}: {price} - updated using other token {other_token['symbol']}"
-            )
 
         return price
 
@@ -744,8 +699,6 @@ class Token(Model):
     @classmethod
     def from_tokenlists(cls):
 
-        """Fetches and merges all the tokens from available tokenlists."""
-
         our_chain_id = w3.eth.chain_id
         all_tokens = cls._fetch_all_tokens(our_chain_id)
 
@@ -753,12 +706,6 @@ class Token(Model):
 
     @classmethod
     def is_token_present(cls, address):
-        """
-        Check if a token with a given address exists in the token list.
-
-        :param address: The address of the token to be searched for.
-        :return: True if the token exists, otherwise False.
-        """
 
         assets = CACHE.get("tokenList:json")
 
@@ -822,7 +769,6 @@ class Token(Model):
     def _is_valid_token(
         token_data: Dict[str, Union[str, int]], our_chain_id: int
     ) -> bool:
-        """Validates if the token is from the correct chain and not in the ignored list."""
 
         address = token_data.get("address", "").lower()
 

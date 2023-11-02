@@ -14,7 +14,8 @@ class ModelUteis:
     @staticmethod
     def ensure_token_validity(token):
         """
-        Ensure the validity of a token by setting default values for missing attributes.
+        Ensure the validity of a token by setting default values
+        for missing attributes.
 
         :param token: Token object to validate.
         """
@@ -35,26 +36,29 @@ class ModelUteis:
         :param decimals: Number of decimals the token has.
         :return: Boolean indicating the validity of the token.
         """
-        return decimals is not None and isinstance(decimals, int)
+        valid_decimals = decimals is not None and isinstance(decimals, int)
+        return valid_decimals
 
 
 class JSONEncoder(json.JSONEncoder):
     """
-    Custom JSON encoder that handles special data types like decimals, datetimes, and UUIDs.
+    Custom JSON encoder that handles special data types
+    like decimals, datetimes, and UUIDs.
     """
 
     def default(self, obj):
         """
-        Override the default method to provide custom serialization for special types.
+        Override the default method to provide custom serialization
+        for special types.
 
         :param obj: Object to be serialized.
         :return: Serialized form of the object.
         """
         if isinstance(obj, decimal.Decimal):
             return float(obj)
-        elif isinstance(obj, (datetime.datetime, datetime.date)):
+        if isinstance(obj, (datetime.datetime, datetime.date)):
             return obj.isoformat()
-        elif isinstance(obj, uuid.UUID):
+        if isinstance(obj, uuid.UUID):
             return obj.hex
 
-        return super(JSONEncoder, self).default(obj)
+        return super().default(obj)

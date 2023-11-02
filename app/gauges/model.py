@@ -10,7 +10,8 @@ from web3.constants import ADDRESS_ZERO
 
 
 class Gauge(Model):
-    """Model representing a Gauge with functionalities to fetch and update data from the blockchain.
+    """Model representing a Gauge with functionalities to
+    fetch and update data from the blockchain.
 
     The model provides methods to:
     - Fetch and validate token decimals.
@@ -118,7 +119,7 @@ class Gauge(Model):
                         data["reward"] = 0
                 except Exception as e:
                     LOGGER.error(
-                        f"Error processing reward rate for address {address}: {e}"
+                        f"Error processing reward rate {address}: {e}"
                     )
 
                 try:
@@ -169,12 +170,12 @@ class Gauge(Model):
 
                 except Exception as e:
                     LOGGER.error(
-                        f"Error processing bribe data for address {address}: {e}"
+                        f"Error processing bribe data for {address}: {e}"
                     )
 
             else:
                 LOGGER.warning(
-                    f"Token not found for default address: {DEFAULT_TOKEN_ADDRESS}"
+                    f"Token not found for address: {DEFAULT_TOKEN_ADDRESS}"
                 )
 
         except Exception as e:
@@ -287,7 +288,7 @@ class Gauge(Model):
             gauge.save()
         except Exception as e:
             LOGGER.error(
-                f"Error fetching external rewards for gauge {gauge.address}: {e}"
+                f"Error fetching external rewards for {gauge.address}: {e}"
             )
 
     @classmethod
@@ -352,5 +353,5 @@ class Gauge(Model):
 
         except Exception as e:
             LOGGER.error(
-                f"Error fetching internal rewards for gauge {gauge.address}: {e}"
+                f"Error fetching internal rewards for {gauge.address}: {e}"
             )

@@ -13,7 +13,8 @@ class VaraPrice(object):
     Handles the retrieval and caching of the Vara price.
 
     The class manages the caching and retrieval of the Vara price information.
-    This endpoint provides a quick way to fetch the up-to-date Vara token price.
+    This endpoint provides a quick way to fetch the up-to-date
+    Vara token price.
     """
 
     CACHE_KEY = "vara:json"

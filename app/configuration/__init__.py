@@ -2,7 +2,6 @@
 
 import json
 import math
-from datetime import timedelta
 
 import falcon
 import requests
@@ -38,7 +37,7 @@ class Configuration(object):
             n = math.ceil(len(pairs_addresses) / (len(pairs_addresses) % 30))
 
             pairs_addresses = [
-                pairs_addresses[i : i + n]
+                pairs_addresses[i: i + n]
                 for i in range(0, len(pairs_addresses), n)
             ]
             if pairs_addresses:

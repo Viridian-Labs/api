@@ -33,8 +33,6 @@ stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(
     logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 )
-# stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s - Line: %(lineno)d - %(message)s'))
-
 
 LOGGER.addHandler(stream_handler)
 

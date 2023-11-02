@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Find all Python files and .env files in the app directory and its subdirectories
-files=$(find ../app -name "*.py" -o -name ".env")
+# Find all Python files and .env files in the app and scripts directories and their subdirectories
+files=$(find ../app ../scripts -name "*.py" -o -name ".env")
 
 # Process each file
 for file in $files; do

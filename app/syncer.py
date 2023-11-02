@@ -2,15 +2,14 @@
 
 import time
 
-import requests
-from app.assets import Assets, Token
+from app.assets import Assets
 from app.circulating import CirculatingSupply
 from app.configuration import Configuration
-from app.pairs import Pair, Pairs
-from app.settings import (CACHE, LOGGER, ROUTER_ADDRESS, SYNC_WAIT_SECONDS,
-                          reset_multicall_pool_executor)
+from app.pairs import Pairs
+from app.settings import (
+    CACHE, LOGGER, SYNC_WAIT_SECONDS, reset_multicall_pool_executor
+)
 from app.vara import VaraPrice
-from multicall import Call, Multicall
 
 
 class Syncer:
