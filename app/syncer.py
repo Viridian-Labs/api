@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 
 import time
-import requests
-from multicall import Call, Multicall
 
+import requests
 from app.assets import Assets, Token
-from app.pairs import Pairs, Pair
-from app.settings import CACHE, LOGGER, SYNC_WAIT_SECONDS, ROUTER_ADDRESS, reset_multicall_pool_executor
-from app.vara import VaraPrice
 from app.circulating import CirculatingSupply
 from app.configuration import Configuration
+from app.pairs import Pair, Pairs
+from app.settings import (CACHE, LOGGER, ROUTER_ADDRESS, SYNC_WAIT_SECONDS,
+                          reset_multicall_pool_executor)
+from app.vara import VaraPrice
+from multicall import Call, Multicall
 
 
 class Syncer:
-
     @staticmethod
     def is_cache_expired(key):
         ttl = CACHE.ttl(key)
@@ -34,16 +34,20 @@ class Syncer:
 
     @staticmethod
     def sync_circulating():
-        Syncer.sync_with_cache("circulating:string", "circulating supply", CirculatingSupply.sync)
+        Syncer.sync_with_cache(
+            "circulating:string", "circulating supply", CirculatingSupply.sync
+        )
 
     @staticmethod
     def sync_configuration():
-        Syncer.sync_with_cache("volume:json", "configuration", Configuration.sync)
+        Syncer.sync_with_cache(
+            "volume:json", "configuration", Configuration.sync
+        )
 
     @staticmethod
     def sync_pairs():
         Syncer.sync_with_cache("pairs:json", "Pairs", Pairs.sync)
-    
+
     @staticmethod
     def sync_supply():
         Syncer.sync_with_cache("supply:json", "supply", CirculatingSupply.sync)
@@ -51,7 +55,7 @@ class Syncer:
     @staticmethod
     def sync_vara():
         Syncer.sync_with_cache("vara:json", "VARA price", VaraPrice.sync)
-                                                                     
+
     @staticmethod
     def sync():
         t0 = time.time()
@@ -83,8 +87,7 @@ class Syncer:
         LOGGER.info("Syncing vara data done in %s seconds.", t7 - t6)
         LOGGER.info("Total syncing time: %s seconds.", t7 - t0)
 
-        reset_multicall_pool_executor()        
-        
+        reset_multicall_pool_executor()
 
     @staticmethod
     def sync_forever():

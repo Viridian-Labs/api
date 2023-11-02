@@ -30,9 +30,10 @@ LOGGER = logging.getLogger(__name__)
 
 # Adding StreamHandler to display logs in the console
 stream_handler = logging.StreamHandler(sys.stdout)
-stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-#stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s - Line: %(lineno)d - %(message)s'))
-
+stream_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+)
+# stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s - Line: %(lineno)d - %(message)s'))
 
 
 LOGGER.addHandler(stream_handler)
@@ -41,8 +42,10 @@ LOGGER.addHandler(stream_handler)
 LOG_SAVE = env("LOG_SAVE", default=0)
 
 if LOG_SAVE:
-    file_handler = logging.FileHandler('app.log') 
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    file_handler = logging.FileHandler("app.log")
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    )
     LOGGER.addHandler(file_handler)
 
 
@@ -65,13 +68,9 @@ BLUECHIP_TOKEN_ADDRESSES = (
 AXELAR_BLUECHIPS_ADDRESSES = (
     env("AXELAR_BLUECHIPS_ADDRESSES", default="").lower().split(",")
 )
-RETRY_DELAY = (
-    env("RETRY_DELAY", default=10)
-)
+RETRY_DELAY = env("RETRY_DELAY", default=10)
 
-RETRY_COUNT = (
-    env("RETRY_COUNT", default=3)
-)
+RETRY_COUNT = env("RETRY_COUNT", default=3)
 
 
 INTERNAL_PRICE_ORDER = env(
@@ -128,7 +127,6 @@ SUPPLY_CACHE_EXPIRATION = env.int(
 
 # Placeholder for our cache instance (Redis)
 CACHE = None
-
 
 
 def reset_multicall_pool_executor():

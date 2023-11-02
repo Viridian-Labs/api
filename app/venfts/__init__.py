@@ -3,13 +3,12 @@
 import json
 
 import falcon
-from web3 import Web3
-
 from app.misc import JSONEncoder
 from app.pairs import Gauge, Pair, Token
 from app.rewards import BribeReward, EmissionReward, FeeReward
 from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER,
                           reset_multicall_pool_executor)
+from web3 import Web3
 
 from .model import VeNFT
 
@@ -40,7 +39,8 @@ class Accounts(object):
 
         default_token = Token.find(DEFAULT_TOKEN_ADDRESS)
         emissions = EmissionReward.query(
-            EmissionReward.account_address == address)
+            EmissionReward.account_address == address
+        )
 
         for emission in emissions:
             edata = emission._data
@@ -66,7 +66,8 @@ class Accounts(object):
                 rdata = reward._data
 
                 rdata["source"] = reward.__class__.__name__.replace(
-                    "Reward", "")
+                    "Reward", ""
+                )
 
                 if reward.token_address:
                     rdata["token"] = Token.find(reward.token_address)._data
@@ -83,19 +84,19 @@ class Accounts(object):
 
         return serialized, to_meta
 
-
     @classmethod
     def recache(cls, address):
         """
         Updates the cache for veNFTs and returns the serialized data.
 
-        This method fetches fresh veNFTs data for the given address, serializes it, 
+        This method fetches fresh veNFTs data for the given address, serializes it,
         and caches the serialized data for quick retrieval in subsequent requests.
         """
         rewards, emissions = cls.serialize(address)
 
         serialized = json.dumps(
-            dict(data=rewards, meta=emissions), cls=JSONEncoder)
+            dict(data=rewards, meta=emissions), cls=JSONEncoder
+        )
 
         CACHE.set(cls.CACHE_KEY % address, cls.KEEPALIVE, serialized)
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY % address)
@@ -106,8 +107,8 @@ class Accounts(object):
         """
         Retrieves and returns the veNFTs and associated rewards for a given address.
 
-        This method fetches the veNFTs data from the cache or retrieves fresh data if 
-        needed. It also validates the provided address parameter and ensures the 
+        This method fetches the veNFTs data from the cache or retrieves fresh data if
+        needed. It also validates the provided address parameter and ensures the
         response structure is consistent.
         """
         address = req.get_param("address")
@@ -130,5 +131,7 @@ class Accounts(object):
             resp.text = data
             resp.status = falcon.HTTP_200
         else:
-            LOGGER.warning("veNFTs data not found in cache for address %s!", address)
+            LOGGER.warning(
+                "veNFTs data not found in cache for address %s!", address
+            )
             resp.status = falcon.HTTP_204

@@ -5,6 +5,7 @@ import decimal
 import json
 import uuid
 
+
 class ModelUteis:
     """
     A utility class providing static methods related to tokens and gauges.
@@ -18,14 +19,13 @@ class ModelUteis:
         :param token: Token object to validate.
         """
         if token.name is None:
-            token.name = 'UNKNOWN'
+            token.name = "UNKNOWN"
         if token.symbol is None:
-            token.symbol = 'UNKNOWN'
+            token.symbol = "UNKNOWN"
         if token.decimals is None:
             token.decimals = 18
 
-        token.save()    
-   
+        token.save()
 
     @staticmethod
     def validate_token(decimals):
@@ -56,7 +56,5 @@ class JSONEncoder(json.JSONEncoder):
             return obj.isoformat()
         elif isinstance(obj, uuid.UUID):
             return obj.hex
-       
+
         return super(JSONEncoder, self).default(obj)
-
-

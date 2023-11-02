@@ -1,22 +1,25 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
+
 import sys
 import threading
-import falcon
-import bjoern
 from logging import StreamHandler
-from falcon_compression.middleware import CompressionMiddleware
-from requestlogger import ApacheFormatter, WSGILogger
+
+import bjoern
+import falcon
 from app.assets import Assets
+from app.circulating import CirculatingSupply
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.circulating import CirculatingSupply
-from app.vara import VaraPrice
-from app.voter.events import VoterContractMonitor
-from app.settings import (CORS_ALLOWED_DOMAINS, LOGGER, PORT, VOTER_ADDRESS, WEB3_PROVIDER_URI, honeybadger_handler)
+from app.settings import (CORS_ALLOWED_DOMAINS, LOGGER, PORT, VOTER_ADDRESS,
+                          WEB3_PROVIDER_URI, honeybadger_handler)
 from app.supply import Supply
+from app.vara import VaraPrice
 from app.venfts import Accounts
+from app.voter.events import VoterContractMonitor
+from falcon_compression.middleware import CompressionMiddleware
+from requestlogger import ApacheFormatter, WSGILogger
 
 middleware = [
     CompressionMiddleware(),
@@ -24,10 +27,14 @@ middleware = [
 
 if CORS_ALLOWED_DOMAINS:
     middleware.append(
-        falcon.CORSMiddleware(allow_origins=CORS_ALLOWED_DOMAINS,),
+        falcon.CORSMiddleware(
+            allow_origins=CORS_ALLOWED_DOMAINS,
+        ),
     )
 
-app_config = dict(middleware=middleware, cors_enable=bool(CORS_ALLOWED_DOMAINS))
+app_config = dict(
+    middleware=middleware, cors_enable=bool(CORS_ALLOWED_DOMAINS)
+)
 app = falcon.App(**app_config)
 app.add_error_handler(Exception, honeybadger_handler)
 app.req_options.auto_parse_form_urlencoded = True
@@ -44,13 +51,13 @@ wsgi = WSGILogger(app, [StreamHandler(sys.stdout)], ApacheFormatter())
 
 def main():
 
-    #voter_monitor = VoterContractMonitor(contract_address=VOTER_ADDRESS, node_endpoint=WEB3_PROVIDER_URI)
-    #monitor_thread = threading.Thread(target=voter_monitor.monitor)
-    #monitor_thread.start()
+    # voter_monitor = VoterContractMonitor(contract_address=VOTER_ADDRESS, node_endpoint=WEB3_PROVIDER_URI)
+    # monitor_thread = threading.Thread(target=voter_monitor.monitor)
+    # monitor_thread.start()
 
     LOGGER.info("Starting on port %s ...", PORT)
     bjoern.run(wsgi, "", PORT, reuse_port=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import json
-import falcon
-from multicall import Call, Multicall
 
-from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER, SUPPLY_CACHE_EXPIRATION,
-                          TREASURY_ADDRESS, VE_ADDRESS)
+import falcon
+from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER,
+                          SUPPLY_CACHE_EXPIRATION, TREASURY_ADDRESS,
+                          VE_ADDRESS)
+from multicall import Call, Multicall
 
 
 class CirculatingSupply:
@@ -14,9 +15,8 @@ class CirculatingSupply:
     CACHE_KEY = "circulating:string"
 
     @classmethod
-    def sync(cls):       
+    def sync(cls):
         cls.recache()
-        
 
     @classmethod
     def recache(cls):
@@ -24,27 +24,30 @@ class CirculatingSupply:
         supply_multicall = Multicall(
             [
                 Call(
-                    DEFAULT_TOKEN_ADDRESS, 
-                    "decimals()(uint256)", 
-                    [["token_decimals", None]]
+                    DEFAULT_TOKEN_ADDRESS,
+                    "decimals()(uint256)",
+                    [["token_decimals", None]],
                 ),
-                Call(VE_ADDRESS, 
-                     "decimals()(uint256)", 
-                     [["lock_decimals", None]]
+                Call(
+                    VE_ADDRESS,
+                    "decimals()(uint256)",
+                    [["lock_decimals", None]],
                 ),
-                Call(DEFAULT_TOKEN_ADDRESS,
-                    "totalSupply()(uint256)", 
-                    [["raw_total_supply", None]]
+                Call(
+                    DEFAULT_TOKEN_ADDRESS,
+                    "totalSupply()(uint256)",
+                    [["raw_total_supply", None]],
                 ),
-                Call(DEFAULT_TOKEN_ADDRESS,
-                    ["balanceOf(address)(uint256)", VE_ADDRESS], 
-                    [["raw_locked_supply", None]]
+                Call(
+                    DEFAULT_TOKEN_ADDRESS,
+                    ["balanceOf(address)(uint256)", VE_ADDRESS],
+                    [["raw_locked_supply", None]],
                 ),
-                Call(DEFAULT_TOKEN_ADDRESS, 
-                    ["balanceOf(address)(uint256)", 
-                     TREASURY_ADDRESS], 
-                     [["raw_treasury_supply", None]]
-                )
+                Call(
+                    DEFAULT_TOKEN_ADDRESS,
+                    ["balanceOf(address)(uint256)", TREASURY_ADDRESS],
+                    [["raw_treasury_supply", None]],
+                ),
             ]
         )
 
@@ -54,17 +57,19 @@ class CirculatingSupply:
         lock_multiplier = 10 ** data["lock_decimals"]
 
         data["total_supply"] = data["raw_total_supply"] / token_multiplier
-        data["locked_supply"] = (data["raw_locked_supply"] / lock_multiplier) + \
-                                (data["raw_treasury_supply"] / token_multiplier)
-        data["circulating_supply"] = data["total_supply"] - data["locked_supply"]
-        
-        serializable_tokens=data["circulating_supply"]
+        data["locked_supply"] = (
+            data["raw_locked_supply"] / lock_multiplier
+        ) + (data["raw_treasury_supply"] / token_multiplier)
+        data["circulating_supply"] = (
+            data["total_supply"] - data["locked_supply"]
+        )
+
+        serializable_tokens = data["circulating_supply"]
         CACHE.set(cls.CACHE_KEY, serializable_tokens)
         CACHE.expire("circulating:string", SUPPLY_CACHE_EXPIRATION)
 
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY)
         return data["circulating_supply"]
-
 
     def on_get(self, req, resp):
         """Caches and returns our supply info"""

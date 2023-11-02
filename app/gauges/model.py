@@ -1,17 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from multicall import Call, Multicall
-from walrus import FloatField, HashField, IntegerField, Model, TextField, BooleanField
-from web3.constants import ADDRESS_ZERO
-
 from app.assets import Token
-from app.settings import (
-    CACHE,
-    DEFAULT_TOKEN_ADDRESS,
-    LOGGER,
-    VOTER_ADDRESS,
-    WRAPPED_BRIBE_FACTORY_ADDRESS,
-)
+from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER, VOTER_ADDRESS,
+                          WRAPPED_BRIBE_FACTORY_ADDRESS)
+from multicall import Call, Multicall
+from walrus import (BooleanField, FloatField, HashField, IntegerField, Model,
+                    TextField)
+from web3.constants import ADDRESS_ZERO
 
 
 class Gauge(Model):
@@ -42,7 +37,7 @@ class Gauge(Model):
     tbv = FloatField(default=0.0)
     votes = FloatField(default=0.0)
     apr = FloatField(default=0.0)
-    isAlive = BooleanField(default=False)    
+    isAlive = BooleanField(default=False)
     total_fees = FloatField(default=0.0)
     total_bribes = FloatField(default=0.0)
 
@@ -61,11 +56,11 @@ class Gauge(Model):
     def from_chain(cls, address):
 
         """Fetch gauge data from the chain."""
-        
+
         address = address.lower()
-        
+
         data = {}
-        
+
         try:
             data_calls = Multicall(
                 [
@@ -104,7 +99,7 @@ class Gauge(Model):
             if not data.get("isAlive"):
                 LOGGER.warning(f"Gauge {address} is not Alive.")
                 return None
-            
+
             data["total_supply"] = data["total_supply"] / cls.DEFAULT_DECIMALS
 
             token = Token.find(DEFAULT_TOKEN_ADDRESS)
@@ -112,31 +107,48 @@ class Gauge(Model):
                 try:
                     if data.get("reward_rate") is not None:
                         data["reward"] = (
-                            data["reward_rate"] / 10**token.decimals * cls.DAY_IN_SECONDS
+                            data["reward_rate"]
+                            / 10**token.decimals
+                            * cls.DAY_IN_SECONDS
                         )
                     else:
-                        LOGGER.warning(f"No reward rate data for address {address}")                
-                        data["reward"] = 0                
+                        LOGGER.warning(
+                            f"No reward rate data for address {address}"
+                        )
+                        data["reward"] = 0
                 except Exception as e:
-                    LOGGER.error(f"Error processing reward rate for address {address}: {e}")
+                    LOGGER.error(
+                        f"Error processing reward rate for address {address}: {e}"
+                    )
 
                 try:
                     if data.get("bribe_address") in (ADDRESS_ZERO, None):
-                        LOGGER.warning(f"No bribe address data for address {address}")
+                        LOGGER.warning(
+                            f"No bribe address data for address {address}"
+                        )
                         data["bribe_address"] = ADDRESS_ZERO
                         data["fees_address"] = ADDRESS_ZERO
                         data["total_supply"] = 0
                     else:
-                        
-                        if data.get("bribe_address") not in (ADDRESS_ZERO, None):
+
+                        if data.get("bribe_address") not in (
+                            ADDRESS_ZERO,
+                            None,
+                        ):
                             data["wrapped_bribe_address"] = Call(
                                 WRAPPED_BRIBE_FACTORY_ADDRESS,
-                                ["oldBribeToNew(address)(address)", data["bribe_address"]],
+                                [
+                                    "oldBribeToNew(address)(address)",
+                                    data["bribe_address"],
+                                ],
                             )()
                         else:
                             data["wrapped_bribe_address"] = ADDRESS_ZERO
 
-                        if data.get("wrapped_bribe_address") in (ADDRESS_ZERO, ""):
+                        if data.get("wrapped_bribe_address") in (
+                            ADDRESS_ZERO,
+                            "",
+                        ):
                             del data["wrapped_bribe_address"]
 
                         cls.query_delete(cls.address == address.lower())
@@ -145,7 +157,10 @@ class Gauge(Model):
                         gauge = cls.create(address=address, **data)
                         LOGGER.debug("Fetched %s:%s.", cls.__name__, address)
 
-                        if data.get("wrapped_bribe_address") not in (ADDRESS_ZERO, None):
+                        if data.get("wrapped_bribe_address") not in (
+                            ADDRESS_ZERO,
+                            None,
+                        ):
                             cls._fetch_external_rewards(gauge)
 
                         cls._fetch_internal_rewards(gauge)
@@ -153,11 +168,15 @@ class Gauge(Model):
                         return gauge
 
                 except Exception as e:
-                    LOGGER.error(f"Error processing bribe data for address {address}: {e}")
-            
+                    LOGGER.error(
+                        f"Error processing bribe data for address {address}: {e}"
+                    )
+
             else:
-                LOGGER.warning(f"Token not found for default address: {DEFAULT_TOKEN_ADDRESS}")
-                
+                LOGGER.warning(
+                    f"Token not found for default address: {DEFAULT_TOKEN_ADDRESS}"
+                )
+
         except Exception as e:
             LOGGER.error(
                 "Error fetching gauge data from chain for address %s: %s",
@@ -167,8 +186,7 @@ class Gauge(Model):
 
         return None
 
-   
-    @classmethod    
+    @classmethod
     def rebase_apr(cls):
         """Rebase the APR."""
         minter_address = Call(VOTER_ADDRESS, "minter()(address)")()
@@ -205,14 +223,13 @@ class Gauge(Model):
         except Exception as e:
             LOGGER.error(f"Error updating APR for gauge {gauge.address}: {e}")
 
-
     @classmethod
     def _fetch_external_rewards(cls, gauge):
 
         """Fetch external rewards for the gauge."""
 
         try:
-        
+
             LOGGER.debug("Fetched %s:%s.", cls.__name__, gauge)
 
             tokens_len = Call(
@@ -222,10 +239,11 @@ class Gauge(Model):
 
             for idx in range(tokens_len):
                 bribe_token_address = Call(
-                    gauge.wrapped_bribe_address, ["rewards(uint256)(address)", idx]
+                    gauge.wrapped_bribe_address,
+                    ["rewards(uint256)(address)", idx],
                 )()
                 reward_calls.append(
-                    Call(   
+                    Call(
                         gauge.wrapped_bribe_address,
                         ["left(address)(uint256)", bribe_token_address],
                         [[bribe_token_address, None]],
@@ -236,26 +254,41 @@ class Gauge(Model):
 
             for bribe_token_address, amount in rewards_data.items():
 
-                bribe_token_address_str = bribe_token_address.decode('utf-8') if isinstance(bribe_token_address, bytes) else bribe_token_address            
+                bribe_token_address_str = (
+                    bribe_token_address.decode("utf-8")
+                    if isinstance(bribe_token_address, bytes)
+                    else bribe_token_address
+                )
 
-                LOGGER.debug("Checking bribe token %s:%s.", cls.__name__, bribe_token_address_str)
+                LOGGER.debug(
+                    "Checking bribe token %s:%s.",
+                    cls.__name__,
+                    bribe_token_address_str,
+                )
 
                 token = Token.find(bribe_token_address_str)
 
                 if token is not None:
-                    
+
                     token_bribes = amount / 10**token.decimals
-                    gauge.rewards[token.address] = token_bribes                                        
+                    gauge.rewards[token.address] = token_bribes
                     gauge.total_bribes += token_bribes
-                    
-                    LOGGER.debug("Bribe token found %s: %s %s.", cls.__name__, token.symbol, token_bribes)
+
+                    LOGGER.debug(
+                        "Bribe token found %s: %s %s.",
+                        cls.__name__,
+                        token.symbol,
+                        token_bribes,
+                    )
 
                     if token.price:
-                        gauge.tbv += token_bribes * token.price         
+                        gauge.tbv += token_bribes * token.price
 
             gauge.save()
         except Exception as e:
-            LOGGER.error(f"Error fetching external rewards for gauge {gauge.address}: {e}")
+            LOGGER.error(
+                f"Error fetching external rewards for gauge {gauge.address}: {e}"
+            )
 
     @classmethod
     def _fetch_internal_rewards(cls, gauge):
@@ -288,26 +321,36 @@ class Gauge(Model):
 
             for token_address, fee in fees:
 
-                token_address_str = token_address.decode('utf-8') if isinstance(token_address, bytes) else token_address            
+                token_address_str = (
+                    token_address.decode("utf-8")
+                    if isinstance(token_address, bytes)
+                    else token_address
+                )
 
                 token = Token.find(token_address_str)
-                token_fees= fee / 10**token.decimals
+                token_fees = fee / 10**token.decimals
                 gauge.total_fees += token_fees
 
                 if gauge.rewards.get(token_address):
-                    gauge.rewards[token_address] = float(
-                        gauge.rewards[token_address]
-                    ) + token_fees
+                    gauge.rewards[token_address] = (
+                        float(gauge.rewards[token_address]) + token_fees
+                    )
                 elif fee > 0:
                     gauge.rewards[token_address] = token_fees
-                                        
-                    LOGGER.debug("Fees token found %s: %s %s.", cls.__name__, token.symbol, fee)
-                    
+
+                    LOGGER.debug(
+                        "Fees token found %s: %s %s.",
+                        cls.__name__,
+                        token.symbol,
+                        fee,
+                    )
+
                 if token.price:
                     gauge.tbv += fee / 10**token.decimals * token.price
 
             gauge.save()
 
         except Exception as e:
-            LOGGER.error(f"Error fetching internal rewards for gauge {gauge.address}: {e}")
-
+            LOGGER.error(
+                f"Error fetching internal rewards for gauge {gauge.address}: {e}"
+            )
