@@ -13,7 +13,8 @@ RUN pip install poetry
 
 ENV PATH="$PATH:$POETRY_HOME/bin"
 
-FROM base AS prod
+#FROM base AS prod
+FROM base AS sync
 
 WORKDIR /app
 COPY ./pyproject.toml /app
