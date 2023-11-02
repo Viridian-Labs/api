@@ -88,8 +88,8 @@ class Syncer:
         LOGGER.info("Total syncing time: %s seconds.", t7 - t0)
 
         reset_multicall_pool_executor()
-        
-        
+
+
 def sync_forever():
     LOGGER.info(f"Syncing every {SYNC_WAIT_SECONDS} seconds ...")
 
@@ -103,7 +103,7 @@ def sync_forever():
             LOGGER.error(error)
 
         time.sleep(SYNC_WAIT_SECONDS)
-        
+
 
 if __name__ == "__main__":
     sync_forever()
