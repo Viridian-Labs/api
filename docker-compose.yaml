@@ -11,6 +11,7 @@ services:
   api:
     build:
       context: .
+      dockerfile: Dockerfile
       target: prod
     ports:
       - "8000:8000"
@@ -24,7 +25,8 @@ services:
   sync:
     build:
       context: .
-      dockerfile: sync-service/Dockerfile
+      dockerfile: Dockerfile
+      target: sync
     networks:
       - backend
     depends_on:
@@ -32,8 +34,6 @@ services:
       - api
     env_file:
       - .env
-
-      
 
 networks:
   backend:

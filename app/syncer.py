@@ -88,21 +88,22 @@ class Syncer:
         LOGGER.info("Total syncing time: %s seconds.", t7 - t0)
 
         reset_multicall_pool_executor()
+        
+        
+def sync_forever():
+    LOGGER.info(f"Syncing every {SYNC_WAIT_SECONDS} seconds ...")
 
-    @staticmethod
-    def sync_forever():
-        LOGGER.info(f"Syncing every {SYNC_WAIT_SECONDS} seconds ...")
+    while True:
+        try:
+            Syncer.sync()
+        except KeyboardInterrupt:
+            LOGGER.info("Syncing stopped!")
+            break
+        except Exception as error:
+            LOGGER.error(error)
 
-        while True:
-            try:
-                Syncer.sync()
-            except KeyboardInterrupt:
-                LOGGER.info("Syncing stopped!")
-                break
-            except Exception as error:
-                LOGGER.error(error)
+        time.sleep(SYNC_WAIT_SECONDS)
+        
 
-            time.sleep(SYNC_WAIT_SECONDS)
-
-
-syncer = Syncer()
+if __name__ == "__main__":
+    sync_forever()

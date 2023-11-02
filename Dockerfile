@@ -1,31 +1,31 @@
+# Base stage
 FROM pypy:3.9-slim AS base
-#FROM pypy:3.9-slim-bullseye AS base
 
 ENV POETRY_HOME=/etc/poetry
 ENV POETRY_VIRTUALENVS_CREATE=false
 
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends gcc g++ libssl-dev libev-dev curl
-RUN apt-get clean
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc g++ libssl-dev libev-dev curl && \
+    apt-get clean
 
-
+RUN pip install poetry
 
 ENV PATH="$PATH:$POETRY_HOME/bin"
 
+# Prod stage
 FROM base AS prod
 
 WORKDIR /app
-COPY ./pyproject.toml /app
-COPY ./poetry.lock /app
-
-RUN pip install poetry
-RUN poetry install
-
-COPY ./ /app
-
-RUN poetry lock
-RUN poetry install --only-root
-RUN export PYTHONWARNINGS="ignore:Unverified HTTPS request"
+COPY ./ /app/
+RUN poetry install 
 EXPOSE 8000
+ENTRYPOINT ["poetry", "run", "api-start"]
 
-ENTRYPOINT ["api-start"]
+# Sync stage
+FROM base AS sync
+
+WORKDIR /app
+COPY ./ /app/
+RUN poetry install 
+EXPOSE 8000
+ENTRYPOINT ["poetry", "run", "api-sync"]
