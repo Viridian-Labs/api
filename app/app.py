@@ -11,9 +11,8 @@ from app.assets import Assets
 from app.circulating import CirculatingSupply
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.settings import (
-    CORS_ALLOWED_DOMAINS, LOGGER, PORT, honeybadger_handler
-)
+from app.settings import (CORS_ALLOWED_DOMAINS, LOGGER, PORT,
+                          honeybadger_handler)
 from app.supply import Supply
 from app.vara import VaraPrice
 from app.venfts import Accounts

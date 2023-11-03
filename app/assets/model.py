@@ -294,9 +294,7 @@ class Token(Model):
                 )()
 
                 if not isinstance(result, tuple):
-                    LOGGER.error(
-                        f"Unexpected result type for {token_address}"
-                    )
+                    LOGGER.error(f"Unexpected result type for {token_address}")
                     continue
 
                 amount, _ = result
@@ -318,9 +316,7 @@ class Token(Model):
                 )
                 time.sleep(RETRY_DELAY)
             else:
-                LOGGER.error(
-                    f"Unable to fetch data for {token_address}"
-                )
+                LOGGER.error(f"Unable to fetch data for {token_address}")
                 return 0
 
     def _update_price(self):
@@ -348,10 +344,7 @@ class Token(Model):
                     self.price = getattr(self, self.price_control)()
                     return self._finalize_update(self.price, start_time)
                 else:
-                    LOGGER.error(
-                        "Error on %s has price_control",
-                        self.symbol
-                    )
+                    LOGGER.error("Error on %s has price_control", self.symbol)
                     self.price = 0
             except Exception as e:
                 LOGGER.error(

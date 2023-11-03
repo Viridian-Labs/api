@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import json
+
 import falcon
 from app.misc import JSONEncoder
 from app.pairs import Gauge, Pair, Token
 from app.rewards import BribeReward, EmissionReward, FeeReward
-from app.settings import (
-    CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER, reset_multicall_pool_executor)
+from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER,
+                          reset_multicall_pool_executor)
 from web3 import Web3
+
 from .model import VeNFT
 
 
@@ -37,7 +39,8 @@ class Accounts(object):
 
         default_token = Token.find(DEFAULT_TOKEN_ADDRESS)
         emissions = EmissionReward.query(
-            EmissionReward.account_address == address)
+            EmissionReward.account_address == address
+        )
 
         for emission in emissions:
             edata = emission._data
@@ -51,10 +54,9 @@ class Accounts(object):
         for venft in venfts:
             data = venft._data
             data["rewards"] = []
-            rewards = (list(BribeReward.query(
-                BribeReward.token_id == venft.token_id)) +
-                       list(FeeReward.query(
-                           FeeReward.token_id == venft.token_id)))
+            rewards = list(
+                BribeReward.query(BribeReward.token_id == venft.token_id)
+            ) + list(FeeReward.query(FeeReward.token_id == venft.token_id))
 
             for reward in rewards:
                 rdata = reward._data
@@ -81,7 +83,8 @@ class Accounts(object):
         """
         rewards, emissions = cls.serialize(address)
         serialized = json.dumps(
-            dict(data=rewards, meta=emissions), cls=JSONEncoder)
+            dict(data=rewards, meta=emissions), cls=JSONEncoder
+        )
         CACHE.set(cls.CACHE_KEY % address, cls.KEEPALIVE, serialized)
         LOGGER.debug("Cache updated for %s.", cls.CACHE_KEY % address)
         return serialized
@@ -111,6 +114,7 @@ class Accounts(object):
             resp.text = data
             resp.status = falcon.HTTP_200
         else:
-            LOGGER.warning("veNFTs data not found in cache for address %s!",
-                           address)
+            LOGGER.warning(
+                "veNFTs data not found in cache for address %s!", address
+            )
             resp.status = falcon.HTTP_204

@@ -6,9 +6,8 @@ from app.assets import Assets
 from app.circulating import CirculatingSupply
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.settings import (
-    CACHE, LOGGER, SYNC_WAIT_SECONDS, reset_multicall_pool_executor
-)
+from app.settings import (CACHE, LOGGER, SYNC_WAIT_SECONDS,
+                          reset_multicall_pool_executor)
 from app.vara import VaraPrice
 
 

@@ -26,7 +26,7 @@ class VoterContractMonitor:
 
         LOGGER.info(
             "Starting VoterContractMonitor. Last Block: %s",
-            self.last_processed_block
+            self.last_processed_block,
         )
 
         with open("app/abis/Voter.sol/abi.json", "r") as file:
@@ -41,7 +41,7 @@ class VoterContractMonitor:
         except exceptions.ConnectionError:
             LOGGER.error(
                 "Error: Unable to connect to Ethereum node %s",
-                self.w3.eth.blockNumber
+                self.w3.eth.blockNumber,
             )
             return None
 
@@ -60,8 +60,7 @@ class VoterContractMonitor:
             try:
                 event = getattr(self.contract.events, event_name)
                 for log in event.getPastEvents(
-                    fromBlock=self.last_processed_block,
-                    toBlock=current_block
+                    fromBlock=self.last_processed_block, toBlock=current_block
                 ):
                     self.handle_event(log)
             except exceptions.ContractLogicError as e:

@@ -183,9 +183,7 @@ class Pair(Model):
             return pair
 
         except Exception as e:
-            LOGGER.error(
-                f"Error fetching pair for address {address}: {e}"
-            )
+            LOGGER.error(f"Error fetching pair for address {address}: {e}")
             return None
 
     @classmethod
@@ -221,9 +219,7 @@ class Pair(Model):
             return tvl
 
         except Exception as e:
-            LOGGER.error(
-                f"Error TVL for pool {pool_data.get('symbol')}: {e}"
-            )
+            LOGGER.error(f"Error TVL for pool {pool_data.get('symbol')}: {e}")
             return 0
 
     def balance_of(self, token_address):
