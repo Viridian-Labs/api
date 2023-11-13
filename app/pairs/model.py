@@ -29,11 +29,7 @@ class Pair(Model):
     gauge_address = TextField(index=True)
     tvl = FloatField(default=0)
     apr = FloatField(default=0)
-
-    # TODO: Backwards compat. Remove once no longer needed...
-    isStable = BooleanField()
-    totalSupply = FloatField()
-
+    
     def syncup_gauge(self, retry_count=RETRY_COUNT, retry_delay=RETRY_DELAY):
         """Fetches and updates the gauge data associated
         with this pair from the blockchain."""
