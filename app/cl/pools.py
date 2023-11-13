@@ -2,6 +2,8 @@ import datetime
 import time
 import json
 import decimal
+import requests
+
 from decimal import Decimal
 from multicall import Multicall, Call
 
@@ -287,6 +289,32 @@ def get_mixed_pairs(debug=False):
         'pairs': combined_pairs
     }
 
+
+@staticmethod
+def get_unlimited_lge_chart():
+    limit = 100
+    skip = 0
+    data = []
+    while True:
+        query = f"{{ buys(skip: {skip}, limit: {limit}, orderBy: totalRaised) {{user timestamp amount totalRaised}} }}"
+        response = requests.post(
+            url="https://api.thegraph.com/subgraphs/name/sullivany/unlimited-lge", json={"query": query}
+        )
+
+        if response.status_code == 200:
+            new_data = response.json()["data"]["buys"]
+            data += new_data
+
+            if len(new_data) < limit:
+                break
+            else:
+                skip += limit
+        else:
+            return json.loads(CACHE.get("unlimited-lge-chart"))
+
+    CACHE.set("unlimited-lge-chart", json.dumps(data))
+
+    return data
 
 if __name__ == '__main__':
     p = get_cl_pools(True)
