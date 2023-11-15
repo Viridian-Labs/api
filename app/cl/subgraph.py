@@ -65,7 +65,11 @@ def get_cl_subgraph_tokens():
     tokens = []
 
     while True:
-        query = f"{{ tokens(skip: {skip}, first: {limit}) {{ id name symbol decimals }} }}"
+        query = (
+            f"{{ tokens(skip: {skip}, first: {limit}) "
+            f"{{ id name symbol decimals }} }}"
+        )
+
 
         response = try_subgraph(urls, query)
 
@@ -115,7 +119,8 @@ def get_cl_subgraph_pools():
 
 def fetch_pools_from_subgraph():
     """
-    Continuously fetches pools from the subgraph until all are retrieved or an error occurs.
+    Continuously fetches pools from the subgraph 
+    until all are retrieved or an error occurs.
     """
     skip = 0
     limit = 100
@@ -137,14 +142,10 @@ def fetch_pools_from_subgraph():
                     break
                 else:
                     skip += limit
-            else:
-                if debug:
-                    print(response.text if response else "No response")
+            else:                
                 LOGGER.error("Error in subgraph pools")
                 break
-        except requests.exceptions.Timeout:
-            if debug:
-                print("Timeout")
+        except requests.exceptions.Timeout:            
             LOGGER.error("Timeout in cl_subgraph_pools")
             break
         except Exception as e:

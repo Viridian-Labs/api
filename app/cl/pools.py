@@ -74,7 +74,7 @@ def _fetch_pools():
             pools[pool["id"]] = pool
 
     today = time.time() // 86400 * 86400
-    cutoff = today - 86400 * 7    
+    cutoff = today - 86400 * 7
 
     # process tvl
     for pool_address, pool in pools.items():
@@ -88,7 +88,7 @@ def _fetch_pools():
         )
 
     # process fee apr, based on last 7 days' fees
-    # usd in range is based on the day's high and low prices, 
+    # usd in range is based on the day's high and low prices,
     # narrowed to +- 10% if needed
     for pool_address, pool in pools.items():
         valid_days = list(
@@ -116,7 +116,7 @@ def _fetch_pools():
             # print("day['feesUSD']", day['feesUSD'])
             # print("day['tvlUSD']", day['tvlUSD'])
             # print("day_usd_in_range", day_usd_in_range)
-            # projected fees for the voters, 
+            # projected fees for the voters,
             # this accounts for the 75% going to voter
             pool["projectedFees"]["days"] += 1
             pool["projectedFees"]["tokens"][pool["token0"]["id"]] += int(
@@ -139,7 +139,7 @@ def _fetch_pools():
             usd_in_range / len(valid_days) if len(valid_days) > 0 else 1
         )
 
-        # apr is in %s, 20% goes to users, 
+        # apr is in %s, 20% goes to users,
         # 80% goes to veVara and treasury
         try:
             # this already accounts for the 20% to LP
@@ -234,7 +234,8 @@ def _fetch_pools():
         # calculate LP APR
         totalUSD = 0
         for token_address in pool["gauge"]["rewardTokens"]:
-            # reward rate reported by gauge contracts are already normalized to total unboosted liquidity
+            # reward rate reported by gauge contracts 
+            # are already normalized to total unboosted liquidity
             totalUSD += (
                 _reward_rates[pool_address][token_address]
                 * 24
@@ -338,7 +339,9 @@ def get_cl_pools():
         pools = _fetch_pools()
         CACHE.set("cl_pools", json.dumps(pools))
     except Exception as e:
-        LOGGER.warning("Unable to fetch the pools from subgraph")
+        LOGGER.warning(
+                    f"Unable to fetch the pools from subgraph: {e}"
+                )
         # pools = json.loads(CACHE.get('cl_pools'))
         pools = {"tokens": []}
 
@@ -380,7 +383,11 @@ def get_unlimited_lge_chart():
     skip = 0
     data = []
     while True:
-        query = f"{{ buys(skip: {skip}, limit: {limit}, orderBy: totalRaised) {{user timestamp amount totalRaised}} }}"
+        
+        query = (
+            f"{{ buys(skip: {skip}, limit: {limit}, "
+            f"orderBy: totalRaised) {{user timestamp amount totalRaised}} }}"
+        )
         response = requests.post(
             url="https://api.thegraph.com/subgraphs/name/sullivany/unlimited-lge",
             json={"query": query},
