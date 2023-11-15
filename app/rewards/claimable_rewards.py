@@ -1,7 +1,4 @@
-import json
-
 from app.pairs.aprs import get_apr
-from app.settings import CACHE, LOGGER
 from multicall import Call, Multicall
 
 
@@ -45,8 +42,3 @@ def get_voter_claimable_rewards(token_id):
         reward["totalUSD"] = value * reward["price"] / 1e18
 
     return rewards
-
-
-if __name__ == "__main__":
-    rewards = get_voter_claimable_rewards(50)
-    print(rewards)

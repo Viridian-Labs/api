@@ -1,4 +1,4 @@
-from math import ceil, isqrt, sqrt
+from math import ceil, sqrt
 from typing import Tuple
 
 
@@ -141,15 +141,7 @@ def token_amounts_from_current_price(
     sqrt_price: int, deviation: int, liquidity: int
 ) -> Tuple[int, int]:
     """
-            Returns the token0 and token1 amounts around the price and deviation in basis points (1/10000)
-
-    Args:
-                    price (int): the pool's current sqrt price
-        deviation (int): the deviation from current price, in basis points (1/10000)
-        liquidity (int): the amount of liquidity to mint
-
-    Returns:
-                    Tuple[token0_amount,token1_amount]
+    Returns the token0 and token1 amounts around the price and deviation
     """
 
     sqrt_price = int(sqrt_price)

@@ -5,13 +5,10 @@ import time
 from decimal import Decimal
 
 import requests
-from app.cl.constants.tokenType import Token_Type, weth_address
 from app.cl.range_tvl import range_tvl
-from app.cl.sqrt_price_math import (get_amount0_delta, get_amount1_delta,
-                                    token_amounts_from_current_price)
+
 from app.cl.subgraph import get_cl_subgraph_pools, get_cl_subgraph_tokens
-from app.cl.tick import (TICK_SPACINGS, get_sqrt_ratio_at_tick,
-                         get_tick_at_sqrt_ratio)
+
 from app.settings import CACHE, LOGGER, NATIVE_TOKEN_ADDRESS
 from multicall import Call, Multicall
 
@@ -77,8 +74,7 @@ def _fetch_pools():
             pools[pool["id"]] = pool
 
     today = time.time() // 86400 * 86400
-    cutoff = today - 86400 * 7
-    x96 = int(2**96)
+    cutoff = today - 86400 * 7    
 
     # process tvl
     for pool_address, pool in pools.items():
@@ -92,7 +88,8 @@ def _fetch_pools():
         )
 
     # process fee apr, based on last 7 days' fees
-    # usd in range is based on the day's high and low prices, narrowed to +- 10% if needed
+    # usd in range is based on the day's high and low prices, 
+    # narrowed to +- 10% if needed
     for pool_address, pool in pools.items():
         valid_days = list(
             filter(lambda day: int(day["date"]) >= cutoff, pool["poolDayData"])
@@ -119,7 +116,8 @@ def _fetch_pools():
             # print("day['feesUSD']", day['feesUSD'])
             # print("day['tvlUSD']", day['tvlUSD'])
             # print("day_usd_in_range", day_usd_in_range)
-            # projected fees for the voters, this accounts for the 75% going to voter
+            # projected fees for the voters, 
+            # this accounts for the 75% going to voter
             pool["projectedFees"]["days"] += 1
             pool["projectedFees"]["tokens"][pool["token0"]["id"]] += int(
                 float(day["volumeToken0"])
@@ -141,7 +139,8 @@ def _fetch_pools():
             usd_in_range / len(valid_days) if len(valid_days) > 0 else 1
         )
 
-        # apr is in %s, 20% goes to users, 80% goes to veVara and treasury
+        # apr is in %s, 20% goes to users, 
+        # 80% goes to veVara and treasury
         try:
             # this already accounts for the 20% to LP
             pool["feeApr"] = (
@@ -348,8 +347,10 @@ def get_cl_pools():
 
 def get_mixed_pairs():
     """
-    Combines and de-duplicates tokens from CL and V2 sources, and merges their pool and pair data.
-    Returns a dictionary containing unique tokens and combined pairs.
+    Combines and de-duplicates tokens from CL and V2 sources, 
+    and merges their pool and pair data.
+    Returns a dictionary containing unique tokens 
+    and combined pairs.
     """
     # Fetch pools and tokens from CL and V2 sources
     cl = get_cl_pools()

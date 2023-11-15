@@ -1,5 +1,4 @@
-from app.settings import CACHE, LOGGER, NATIVE_TOKEN_ADDRESS
-
+from app.settings import CACHE
 
 def get_apr():
     aprs = CACHE.get("aprs:json")

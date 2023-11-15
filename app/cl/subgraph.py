@@ -5,7 +5,12 @@ from app.cl.constants.tokenType import (Token_Type, token_type_dict,
                                         weth_address)
 from app.settings import CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER
 
-cl_subgraph_url = "https://graph.equilibrefinance.com/subgraphs/name/equilibre/subgraph1/graphql"
+
+cl_subgraph_url = (
+    "https://graph.equilibrefinance.com/subgraphs/name/equilibre/"
+    "subgraph1/graphql"
+)
+
 urls = [cl_subgraph_url]
 
 
@@ -17,7 +22,7 @@ def get_prices():
     return prices if prices else {}
 
 
-def process_tokens(tokens, debug):
+def process_tokens(tokens):
     """
     Process token data with prices and types.
     """
@@ -78,7 +83,7 @@ def get_cl_subgraph_tokens():
             LOGGER.warning("Error in subgraph tokens")
             return load_cached_tokens()
 
-    tokens = process_tokens(tokens, debug)
+    tokens = process_tokens(tokens)
     CACHE.set(
         "cl_subgraph_tokens", json.dumps(tokens), timeout=86400
     )  # cache for 1 day
@@ -94,13 +99,13 @@ def load_cached_tokens():
         return []
 
 
-def get_cl_subgraph_pools(debug):
+def get_cl_subgraph_pools():
     """
     Fetches pool data from the subgraph.
     If an error occurs, attempts to return cached data.
     """
     try:
-        pools = fetch_pools_from_subgraph(debug)
+        pools = fetch_pools_from_subgraph()
         CACHE.set("cl_subgraph_pools", json.dumps(pools))
         return pools
     except Exception as e:
@@ -108,7 +113,7 @@ def get_cl_subgraph_pools(debug):
         return load_cached_pools()
 
 
-def fetch_pools_from_subgraph(debug):
+def fetch_pools_from_subgraph():
     """
     Continuously fetches pools from the subgraph until all are retrieved or an error occurs.
     """
@@ -219,5 +224,5 @@ def build_pool_query(skip, limit):
                             volumeToken1
                         }}
                     }}
-                }}                
+                }}
     """
