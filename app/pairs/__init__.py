@@ -4,11 +4,12 @@ import json
 from multiprocessing.pool import ThreadPool
 
 import falcon
+from web3 import Web3
+
 from app.assets import Token
 from app.gauges import Gauge
 from app.misc import JSONEncoder
 from app.settings import CACHE, LOGGER, reset_multicall_pool_executor
-from web3 import Web3
 
 from .model import Pair
 
@@ -22,7 +23,6 @@ class Pairs(object):
 
     @classmethod
     def sync(cls):
-
         addresses = Pair.chain_addresses()
 
         previous_addresses_str = CACHE.get(cls.ADDRESSES_CACHE_KEY)
@@ -53,7 +53,6 @@ class Pairs(object):
 
     @classmethod
     def serialize(cls):
-
         """
         Serializes the list of Pair objects along with related Token
         and Gauge data into a list of dictionaries.
@@ -62,7 +61,6 @@ class Pairs(object):
         pairs = []
 
         for pair in Pair.all():
-
             if pair is None or pair._data is None:
                 continue
 
@@ -89,10 +87,26 @@ class Pairs(object):
 
                 if gauge and gauge._data is not None:
                     data["gauge"] = gauge._data
+                    data["gauge"]["rewards"] = []
                     data["gauge"]["bribes"] = []
+                    data["gauge"]["fees"] = []
 
-                    for (token_addr, reward_ammount) in gauge.rewards:
+                    for token_addr, reward_ammount in gauge.rewards:
+                        data["gauge"]["rewards"].append(
+                            dict(
+                                token=Token.find(token_addr).to_dict(),
+                                reward_ammount=float(reward_ammount),
+                            )
+                        )
+                    for token_addr, reward_ammount in gauge.bribes:
                         data["gauge"]["bribes"].append(
+                            dict(
+                                token=Token.find(token_addr).to_dict(),
+                                reward_ammount=float(reward_ammount),
+                            )
+                        )
+                    for token_addr, reward_ammount in gauge.fees:
+                        data["gauge"]["fees"].append(
                             dict(
                                 token=Token.find(token_addr).to_dict(),
                                 reward_ammount=float(reward_ammount),
@@ -109,7 +123,6 @@ class Pairs(object):
 
     @classmethod
     def recache(cls):
-
         """
         Updates the cache with the serialized pairs data.
         """
@@ -122,7 +135,6 @@ class Pairs(object):
         return pairs
 
     def resync(self, pair_address, gauge_address):
-
         """Resyncs a pair based on it's address or gauge address."""
 
         if Web3.isAddress(gauge_address):
@@ -139,7 +151,6 @@ class Pairs(object):
         Pairs.recache()
 
     def on_get(self, req, resp):
-
         """
         Fetches gauge data from the blockchain given an address,
         and updates or creates the corresponding Gauge object in the database.

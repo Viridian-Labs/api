@@ -1,12 +1,24 @@
 # -*- coding: utf-8 -*-
 
-from app.assets import Token
-from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER, VOTER_ADDRESS,
-                          WRAPPED_BRIBE_FACTORY_ADDRESS)
 from multicall import Call, Multicall
-from walrus import (BooleanField, FloatField, HashField, IntegerField, Model,
-                    TextField)
+from walrus import (
+    BooleanField,
+    FloatField,
+    HashField,
+    IntegerField,
+    Model,
+    TextField,
+)
 from web3.constants import ADDRESS_ZERO
+
+from app.assets import Token
+from app.settings import (
+    CACHE,
+    DEFAULT_TOKEN_ADDRESS,
+    LOGGER,
+    VOTER_ADDRESS,
+    WRAPPED_BRIBE_FACTORY_ADDRESS,
+)
 
 
 class Gauge(Model):
@@ -35,6 +47,8 @@ class Gauge(Model):
     wrapped_bribe_address = TextField(index=True)
     reward = FloatField()
     rewards = HashField()
+    bribes = HashField()
+    fees = HashField()
     tbv = FloatField(default=0.0)
     votes = FloatField(default=0.0)
     apr = FloatField(default=0.0)
@@ -55,7 +69,6 @@ class Gauge(Model):
 
     @classmethod
     def from_chain(cls, address):
-
         """Fetch gauge data from the chain."""
 
         address = address.lower()
@@ -109,7 +122,7 @@ class Gauge(Model):
                     if data.get("reward_rate") is not None:
                         data["reward"] = (
                             data["reward_rate"]
-                            / 10**token.decimals
+                            / 10 ** token.decimals
                             * cls.DAY_IN_SECONDS
                         )
                     else:
@@ -131,7 +144,6 @@ class Gauge(Model):
                         data["fees_address"] = ADDRESS_ZERO
                         data["total_supply"] = 0
                     else:
-
                         if data.get("bribe_address") not in (
                             ADDRESS_ZERO,
                             None,
@@ -201,7 +213,6 @@ class Gauge(Model):
 
     @classmethod
     def _update_apr(cls, gauge):
-
         """Update the APR for the gauge."""
 
         try:
@@ -213,7 +224,7 @@ class Gauge(Model):
             )()
 
             token = Token.find(DEFAULT_TOKEN_ADDRESS)
-            votes = votes / 10**token.decimals
+            votes = votes / 10 ** token.decimals
 
             gauge.apr = cls.rebase_apr()
             if token.price and votes * token.price > 0:
@@ -226,11 +237,9 @@ class Gauge(Model):
 
     @classmethod
     def _fetch_external_rewards(cls, gauge):
-
         """Fetch external rewards for the gauge."""
 
         try:
-
             LOGGER.debug("Fetched %s:%s.", cls.__name__, gauge)
 
             tokens_len = Call(
@@ -254,7 +263,6 @@ class Gauge(Model):
             rewards_data = Multicall(reward_calls)()
 
             for bribe_token_address, amount in rewards_data.items():
-
                 bribe_token_address_str = (
                     bribe_token_address.decode("utf-8")
                     if isinstance(bribe_token_address, bytes)
@@ -270,10 +278,10 @@ class Gauge(Model):
                 token = Token.find(bribe_token_address_str)
 
                 if token is not None:
-
-                    token_bribes = amount / 10**token.decimals
+                    token_bribes = amount / 10 ** token.decimals
                     gauge.rewards[token.address] = token_bribes
                     gauge.total_bribes += token_bribes
+                    gauge.bribes[token.address] = token_bribes
 
                     LOGGER.debug(
                         "Bribe token found %s: %s %s.",
@@ -293,7 +301,6 @@ class Gauge(Model):
 
     @classmethod
     def _fetch_internal_rewards(cls, gauge):
-
         """Fetch internal rewards for the gauge."""
 
         try:
@@ -321,7 +328,6 @@ class Gauge(Model):
             ]
 
             for token_address, fee in fees:
-
                 token_address_str = (
                     token_address.decode("utf-8")
                     if isinstance(token_address, bytes)
@@ -329,16 +335,17 @@ class Gauge(Model):
                 )
 
                 token = Token.find(token_address_str)
-                token_fees = fee / 10**token.decimals
+                token_fees = fee / 10 ** token.decimals
                 gauge.total_fees += token_fees
 
                 if gauge.rewards.get(token_address):
                     gauge.rewards[token_address] = (
                         float(gauge.rewards[token_address]) + token_fees
                     )
+                    gauge.fees[token_address] = token_fees
                 elif fee > 0:
                     gauge.rewards[token_address] = token_fees
-
+                    gauge.fees[token_address] = token_fees
                     LOGGER.debug(
                         "Fees token found %s: %s %s.",
                         cls.__name__,
@@ -347,7 +354,7 @@ class Gauge(Model):
                     )
 
                 if token.price:
-                    gauge.tbv += fee / 10**token.decimals * token.price
+                    gauge.tbv += fee / 10 ** token.decimals * token.price
 
             gauge.save()
 
