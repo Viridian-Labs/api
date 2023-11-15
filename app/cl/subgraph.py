@@ -141,7 +141,7 @@ def fetch_pools_from_subgraph():
                     break
                 else:
                     skip += limit
-            else:                
+            else:           
                 LOGGER.error("Error in subgraph pools")
                 break
         except requests.exceptions.Timeout:

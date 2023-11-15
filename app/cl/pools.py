@@ -382,7 +382,7 @@ def get_unlimited_lge_chart():
     limit = 100
     skip = 0
     data = []
-    while True:        
+    while True:      
         query = (
             f"{{ buys(skip: {skip}, limit: {limit}, orderBy: totalRaised) "
             f"{{user timestamp amount totalRaised}} }}"
