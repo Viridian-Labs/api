@@ -382,14 +382,17 @@ def get_unlimited_lge_chart():
     limit = 100
     skip = 0
     data = []
-    while True:        
+    while True:
         query = (
             "{ buys(skip: %d, limit: %d, orderBy: totalRaised) "
             "{ user timestamp amount totalRaised } }" % (skip, limit)
         )
 
         response = requests.post(
-            url="https://api.thegraph.com/subgraphs/name/sullivany/unlimited-lge",
+            url=(
+                "https://api.thegraph.com/subgraphs/name/"
+                "sullivany/unlimited-lge"
+            ),
             json={"query": query},
         )
 
@@ -407,4 +410,3 @@ def get_unlimited_lge_chart():
     CACHE.set("unlimited-lge-chart", json.dumps(data))
 
     return data
-
