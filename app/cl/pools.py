@@ -7,17 +7,17 @@ import requests
 from decimal import Decimal
 from multicall import Multicall, Call
 
-from cl.subgraph import get_cl_subgraph_tokens, get_cl_subgraph_pools
-from cl.tick import get_tick_at_sqrt_ratio, get_sqrt_ratio_at_tick, TICK_SPACINGS
-from cl.sqrt_price_math import get_amount0_delta, get_amount1_delta, token_amounts_from_current_price
-from cl.constants.tokenType import Token_Type, weth_address
-from cl.range_tvl import range_tvl
+from app.cl.subgraph import get_cl_subgraph_tokens, get_cl_subgraph_pools
+from app.cl.tick import get_tick_at_sqrt_ratio, get_sqrt_ratio_at_tick, TICK_SPACINGS
+from app.cl.sqrt_price_math import get_amount0_delta, get_amount1_delta, token_amounts_from_current_price
+from app.cl.constants.tokenType import Token_Type, weth_address
+from app.cl.range_tvl import range_tvl
 
 from app.settings import (CACHE, LOGGER, NATIVE_TOKEN_ADDRESS)
 
 decimal.getcontext().prec = 50
 
-with open('cl/constants/feeDistribution.json', 'r') as file:
+with open('app/cl/constants/feeDistribution.json', 'r') as file:
     fee_distribution = json.load(file)
 
 def get_prices():
@@ -28,15 +28,15 @@ def get_pairs_v2():
     pairs = CACHE.get('pairs:json')
     return pairs if pairs else {}
 
-def _fetch_pools(debug):
+def _fetch_pools():
     # set constants
     week = 7 * 24 * 60 * 60
     now = datetime.datetime.now().timestamp()
     period = int(now // week * week + week)
 
     # fetch tokens and pairs from subgraph
-    tokens_array = get_cl_subgraph_tokens(debug)
-    pools_array = get_cl_subgraph_pools(debug)
+    tokens_array = get_cl_subgraph_tokens()
+    pools_array = get_cl_subgraph_pools()
 
     # reformat tokens and pairs
     # + filter out pairs without gauge
@@ -257,40 +257,49 @@ def _fetch_pools(debug):
     }
 
 
-def get_cl_pools(debug=False):
+def get_cl_pools():
     try:
-        pools = _fetch_pools(debug)
+        pools = _fetch_pools()
         CACHE.set('cl_pools', json.dumps(pools))
-    except Exception as e:
-        if debug:
-            raise e
-        LOGGER.error("Error on get_cl_pools")
-        pools = json.loads(CACHE.get('cl_pools'))
+    except Exception as e:        
+        LOGGER.warning("Unable to fetch the pools from subgraph")        
+        #pools = json.loads(CACHE.get('cl_pools'))
+        pools = {'tokens': []}
 
     return pools
 
 
-def get_mixed_pairs(debug=False):
-    cl = get_cl_pools(debug)
-    v2 = get_pairs_v2(debug)
+def get_mixed_pairs():
+    """
+    Combines and de-duplicates tokens from CL and V2 sources, and merges their pool and pair data.
+    Returns a dictionary containing unique tokens and combined pairs.
+    """
+    # Fetch pools and tokens from CL and V2 sources
+    cl = get_cl_pools()
+    v2 = get_pairs_v2()
 
-    combined_tokens = cl['tokens'] + v2['tokens']
+    # Extract tokens from CL and V2
+    cl_tokens = cl.get('tokens', [])
+    v2_tokens = v2.get('tokens', [])
+
+    # Combine and de-duplicate tokens
     unique_tokens = []
-    unique_token_ids = []
-    for token in combined_tokens:
+    unique_token_ids = set()
+    for token in cl_tokens + v2_tokens:
         if token['id'] not in unique_token_ids:
-            unique_token_ids.append(token['id'])
+            unique_token_ids.add(token['id'])
             unique_tokens.append(token)
 
-    combined_pairs = cl['pools'] + v2['pairs']
+    # Combine CL pools and V2 pairs
+    combined_pairs = cl.get('pools', []) + v2.get('pairs', [])
 
+    # Return combined and unique data
     return {
         'tokens': unique_tokens,
         'pairs': combined_pairs
     }
 
 
-@staticmethod
 def get_unlimited_lge_chart():
     limit = 100
     skip = 0
@@ -315,7 +324,3 @@ def get_unlimited_lge_chart():
     CACHE.set("unlimited-lge-chart", json.dumps(data))
 
     return data
-
-if __name__ == '__main__':
-    p = get_cl_pools(True)
-    print(p)
