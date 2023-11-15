@@ -70,7 +70,6 @@ def get_cl_subgraph_tokens():
             f"{{ id name symbol decimals }} }}"
         )
 
-
         response = try_subgraph(urls, query)
 
         if response and response.status_code == 200:
@@ -119,7 +118,7 @@ def get_cl_subgraph_pools():
 
 def fetch_pools_from_subgraph():
     """
-    Continuously fetches pools from the subgraph 
+    Continuously fetches pools from the subgraph
     until all are retrieved or an error occurs.
     """
     skip = 0
@@ -145,7 +144,7 @@ def fetch_pools_from_subgraph():
             else:                
                 LOGGER.error("Error in subgraph pools")
                 break
-        except requests.exceptions.Timeout:            
+        except requests.exceptions.Timeout:
             LOGGER.error("Timeout in cl_subgraph_pools")
             break
         except Exception as e:
@@ -174,56 +173,55 @@ def build_pool_query(skip, limit):
     Builds the GraphQL query for fetching pool data.
     """
     return f"""
-                {{pools(skip: {skip}, limit: {limit}) {{
-                        id
-                        token0
-                            {{
-                                id
-                                symbol
-                                decimals
-                                tokenDayData(first:7 orderBy:date orderDirection:desc){{
-                                    date
-                                    priceUSD
-                                }}
-                            }}
-                        token1
-                            {{
-                                id
-                                symbol
-                                decimals
-                                tokenDayData(first:7 orderBy:date orderDirection:desc){{
-                                    date
-                                    priceUSD
-                                }}
-                            }}
-                        feeTier
-                        liquidity
-                        sqrtPrice
-                        tick
-                        tickSpacing
-                        totalValueLockedUSD
-                        totalValueLockedToken0
-                        totalValueLockedToken1
-                        gauge {{
-                            id
-                            rewardTokens
-                            isAlive
-                            bVaraRatio
-                        }}
-                        feeDistributor {{
-                            id
-                            rewardTokens
-                        }}
-                        poolDayData(first:7 orderBy:date orderDirection:desc){{
-                            date
-                            feesUSD
-                            tvlUSD
-                            liquidity
-                            high
-                            low
-                            volumeToken0
-                            volumeToken1
-                        }}
+        {{
+            pools(skip: {skip}, limit: {limit}) {{
+                id
+                token0 {{
+                    id
+                    symbol
+                    decimals
+                    tokenDayData(first:7 orderBy:date orderDirection:desc){{
+                        date
+                        priceUSD
                     }}
                 }}
+                token1 {{
+                    id
+                    symbol
+                    decimals
+                    tokenDayData(first:7 orderBy:date orderDirection:desc){{
+                        date
+                        priceUSD
+                    }}
+                }}
+                feeTier
+                liquidity
+                sqrtPrice
+                tick
+                tickSpacing
+                totalValueLockedUSD
+                totalValueLockedToken0
+                totalValueLockedToken1
+                gauge {{
+                    id
+                    rewardTokens
+                    isAlive
+                    bVaraRatio
+                }}
+                feeDistributor {{
+                    id
+                    rewardTokens
+                }}
+                poolDayData(first:7 orderBy:date orderDirection:desc){{
+                    date
+                    feesUSD
+                    tvlUSD
+                    liquidity
+                    high
+                    low
+                    volumeToken0
+                    volumeToken1
+                }}
+            }}
+        }}
     """

@@ -234,7 +234,7 @@ def _fetch_pools():
         # calculate LP APR
         totalUSD = 0
         for token_address in pool["gauge"]["rewardTokens"]:
-            # reward rate reported by gauge contracts 
+            # reward rate reported by gauge contracts
             # are already normalized to total unboosted liquidity
             totalUSD += (
                 _reward_rates[pool_address][token_address]
@@ -350,9 +350,9 @@ def get_cl_pools():
 
 def get_mixed_pairs():
     """
-    Combines and de-duplicates tokens from CL and V2 sources, 
+    Combines and de-duplicates tokens from CL and V2 sources,
     and merges their pool and pair data.
-    Returns a dictionary containing unique tokens 
+    Returns a dictionary containing unique tokens
     and combined pairs.
     """
     # Fetch pools and tokens from CL and V2 sources
@@ -382,11 +382,10 @@ def get_unlimited_lge_chart():
     limit = 100
     skip = 0
     data = []
-    while True:
-        
+    while True:        
         query = (
-            f"{{ buys(skip: {skip}, limit: {limit}, "
-            f"orderBy: totalRaised) {{user timestamp amount totalRaised}} }}"
+            f"{{ buys(skip: {skip}, limit: {limit}, orderBy: totalRaised) "
+            f"{{user timestamp amount totalRaised}} }}"
         )
         response = requests.post(
             url="https://api.thegraph.com/subgraphs/name/sullivany/unlimited-lge",
