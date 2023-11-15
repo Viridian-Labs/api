@@ -2,31 +2,26 @@
 
 from __future__ import absolute_import
 
+import json
 import sys
-import requests
-
 from logging import StreamHandler
 
 import bjoern
 import falcon
-import json
-
+import requests
 from app.assets import Assets
 from app.circulating import CirculatingSupply
+from app.cl.pools import get_cl_pools, get_mixed_pairs, get_unlimited_lge_chart
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.settings import (CORS_ALLOWED_DOMAINS, LOGGER, PORT, CACHE,
+from app.rewards import Rewards
+from app.settings import (CACHE, CORS_ALLOWED_DOMAINS, LOGGER, PORT,
                           honeybadger_handler)
 from app.supply import Supply
 from app.vara import VaraPrice
 from app.venfts import Accounts
-from app.rewards import Rewards
-
 from falcon_compression.middleware import CompressionMiddleware
 from requestlogger import ApacheFormatter, WSGILogger
-
-from app.cl.pools import get_cl_pools, get_mixed_pairs, get_unlimited_lge_chart
-
 
 middleware = [
     CompressionMiddleware(),
@@ -58,7 +53,6 @@ app.add_route("/api/v2/voterClaimableRewards", Rewards())
 app.add_route("/api/v2/cl-pools", get_cl_pools())
 app.add_route("/api/v2/mixed-pairs", get_mixed_pairs())
 app.add_route("/api/v2/unlimited-lge-chart", get_unlimited_lge_chart())
-
 
 
 wsgi = WSGILogger(app, [StreamHandler(sys.stdout)], ApacheFormatter())

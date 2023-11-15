@@ -1,8 +1,9 @@
 import json
-import requests
 
-from app.settings import (CACHE, LOGGER, DEFAULT_TOKEN_ADDRESS)
-from app.cl.constants.tokenType import token_type_dict, Token_Type, weth_address 
+import requests
+from app.cl.constants.tokenType import (Token_Type, token_type_dict,
+                                        weth_address)
+from app.settings import CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER
 
 cl_subgraph_url = "https://graph.equilibrefinance.com/subgraphs/name/equilibre/subgraph1/graphql"
 urls = [cl_subgraph_url]
@@ -11,9 +12,10 @@ urls = [cl_subgraph_url]
 def get_prices():
     """
     Fetch prices from cache
-    """    
-    prices = CACHE.get('cl_subgraph_prices')
+    """
+    prices = CACHE.get("cl_subgraph_prices")
     return prices if prices else {}
+
 
 def process_tokens(tokens, debug):
     """
@@ -21,17 +23,18 @@ def process_tokens(tokens, debug):
     """
     prices = get_prices()
     for token in tokens:
-        token['price'] = prices.get(token['symbol'], 0)
-        token_type = token_type_dict.get(token['symbol'], Token_Type['OTHERS'])
-        if token_type == Token_Type['OTHERS']:
-            if 'USD' in token['symbol']:
-                token_type = Token_Type['LOOSE_STABLE']
-            elif token['id'] == weth_address:
-                token_type = Token_Type['WETH']
-            elif token['id'] == DEFAULT_TOKEN_ADDRESS:
-                token_type = Token_Type['VARA']
-        token['type'] = token_type
+        token["price"] = prices.get(token["symbol"], 0)
+        token_type = token_type_dict.get(token["symbol"], Token_Type["OTHERS"])
+        if token_type == Token_Type["OTHERS"]:
+            if "USD" in token["symbol"]:
+                token_type = Token_Type["LOOSE_STABLE"]
+            elif token["id"] == weth_address:
+                token_type = Token_Type["WETH"]
+            elif token["id"] == DEFAULT_TOKEN_ADDRESS:
+                token_type = Token_Type["VARA"]
+        token["type"] = token_type
     return tokens
+
 
 def try_subgraph(urls, query):
     """
@@ -39,7 +42,7 @@ def try_subgraph(urls, query):
     """
     for url in urls:
         try:
-            response = requests.post(url, json={'query': query}, timeout=10)
+            response = requests.post(url, json={"query": query}, timeout=10)
             if response.status_code == 200:
                 return response
         except requests.RequestException as e:
@@ -58,11 +61,11 @@ def get_cl_subgraph_tokens():
 
     while True:
         query = f"{{ tokens(skip: {skip}, first: {limit}) {{ id name symbol decimals }} }}"
-        
+
         response = try_subgraph(urls, query)
 
         if response and response.status_code == 200:
-            new_tokens = response.json().get('data', {}).get('tokens', [])
+            new_tokens = response.json().get("data", {}).get("tokens", [])
             if not new_tokens:
                 break
             tokens.extend(new_tokens)
@@ -71,21 +74,25 @@ def get_cl_subgraph_tokens():
                 break
             else:
                 skip += limit
-        else:            
-            LOGGER.warning("Error in subgraph tokens")            
+        else:
+            LOGGER.warning("Error in subgraph tokens")
             return load_cached_tokens()
 
     tokens = process_tokens(tokens, debug)
-    CACHE.set('cl_subgraph_tokens', json.dumps(tokens), timeout=86400)  # cache for 1 day
+    CACHE.set(
+        "cl_subgraph_tokens", json.dumps(tokens), timeout=86400
+    )  # cache for 1 day
     return tokens
+
 
 def load_cached_tokens():
     """Load tokens from cache if available, or raise an error."""
-    cl_subgraph_tokens = CACHE.get('cl_subgraph_tokens')
+    cl_subgraph_tokens = CACHE.get("cl_subgraph_tokens")
     if cl_subgraph_tokens is not None:
         return json.loads(cl_subgraph_tokens)
-    else:        
+    else:
         return []
+
 
 def get_cl_subgraph_pools(debug):
     """
@@ -94,11 +101,12 @@ def get_cl_subgraph_pools(debug):
     """
     try:
         pools = fetch_pools_from_subgraph(debug)
-        CACHE.set('cl_subgraph_pools', json.dumps(pools))
+        CACHE.set("cl_subgraph_pools", json.dumps(pools))
         return pools
     except Exception as e:
         LOGGER.warning(f"Error in get_cl_subgraph_pools: {e}")
         return load_cached_pools()
+
 
 def fetch_pools_from_subgraph(debug):
     """
@@ -115,7 +123,7 @@ def fetch_pools_from_subgraph(debug):
             response = try_subgraph(urls, query)
 
             if response and response.status_code == 200:
-                new_pools = response.json().get('data', {}).get('pools', [])
+                new_pools = response.json().get("data", {}).get("pools", [])
                 if not new_pools:
                     break
                 pools.extend(new_pools)
@@ -143,15 +151,17 @@ def fetch_pools_from_subgraph(debug):
 
     return pools
 
+
 def load_cached_pools():
     """
     Loads pools from cache if available, or raises an error.
     """
-    cl_subgraph_pools = CACHE.get('cl_subgraph_pools') or []
+    cl_subgraph_pools = CACHE.get("cl_subgraph_pools") or []
     if cl_subgraph_pools:
         return json.loads(cl_subgraph_pools)
     else:
         return []
+
 
 def build_pool_query(skip, limit):
     """
@@ -211,6 +221,3 @@ def build_pool_query(skip, limit):
                     }}
                 }}                
     """
-
-
-
