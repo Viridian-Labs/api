@@ -110,9 +110,10 @@ class Gauge(Model):
             )()
             data.update(data_calls)
 
-            if not data.get("isAlive"):
-                LOGGER.warning(f"Gauge {address} is not Alive.")
-                return None
+            # COMMENTED OUT FOR NOW DUE TO ERRORS IN DAPP
+            # if not data.get("isAlive"):
+            #     LOGGER.warning(f"Gauge {address} is not Alive.")
+            #     return None
 
             data["total_supply"] = data["total_supply"] / cls.DEFAULT_DECIMALS
 
@@ -122,7 +123,7 @@ class Gauge(Model):
                     if data.get("reward_rate") is not None:
                         data["reward"] = (
                             data["reward_rate"]
-                            / 10 ** token.decimals
+                            / 10**token.decimals
                             * cls.DAY_IN_SECONDS
                         )
                     else:
@@ -224,7 +225,7 @@ class Gauge(Model):
             )()
 
             token = Token.find(DEFAULT_TOKEN_ADDRESS)
-            votes = votes / 10 ** token.decimals
+            votes = votes / 10**token.decimals
 
             gauge.apr = cls.rebase_apr()
             if token.price and votes * token.price > 0:
@@ -278,7 +279,7 @@ class Gauge(Model):
                 token = Token.find(bribe_token_address_str)
 
                 if token is not None:
-                    token_bribes = amount / 10 ** token.decimals
+                    token_bribes = amount / 10**token.decimals
                     gauge.rewards[token.address] = token_bribes
                     gauge.total_bribes += token_bribes
                     gauge.bribes[token.address] = token_bribes
@@ -335,7 +336,7 @@ class Gauge(Model):
                 )
 
                 token = Token.find(token_address_str)
-                token_fees = fee / 10 ** token.decimals
+                token_fees = fee / 10**token.decimals
                 gauge.total_fees += token_fees
 
                 if gauge.rewards.get(token_address):
@@ -354,7 +355,7 @@ class Gauge(Model):
                     )
 
                 if token.price:
-                    gauge.tbv += fee / 10 ** token.decimals * token.price
+                    gauge.tbv += fee / 10**token.decimals * token.price
 
             gauge.save()
 
