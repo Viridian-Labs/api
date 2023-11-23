@@ -1,44 +1,38 @@
 import json
-
 import requests
 
-json1_data = requests.get(
-    "https://api.equilibrefinance.com/api/v1/assets"
-).json()["data"]
+# Fetching data from the APIs
+json1_data = requests.get("https://api.equilibrefinance.com/api/v1/assets").json()["data"]
 json2_data = requests.get("http://localhost:8000/api/v1/assets").json()["data"]
 
-with open("json1.txt", "w", encoding="utf-8") as f:
-    json.dump({"data": json1_data}, f)
+# Function to transform data into a dictionary with address as key
+def transform_data(data):
+    return {token["address"]: token for token in data}
 
-with open("json2.txt", "w", encoding="utf-8") as f:
-    json.dump({"data": json2_data}, f)
+# Transforming the data sets
+tokens1 = transform_data(json1_data)
+tokens2 = transform_data(json2_data)
 
-with open("json1.txt", "r", encoding="utf-8") as f:
-    json1_data = json.load(f)["data"]
+# Comparing the prices
+different_prices = []
+same_prices = []
 
-with open("json2.txt", "r", encoding="utf-8") as f:
-    json2_data = json.load(f)["data"]
+for address, token1 in tokens1.items():
+    token2 = tokens2.get(address)
+    if token2:
+        price1 = token1.get("price", 0)
+        price2 = token2.get("price", 0)
+        symbol = token1.get("symbol", "Unknown")
+        if price1 != price2:
+            different_prices.append((symbol, address, price1, price2))
+        else:
+            same_prices.append((symbol, address, price1))
 
-tokens1 = {token["address"] for token in json1_data}
-tokens2 = {token["address"] for token in json2_data}
+# Displaying the results
+print("Tokens with different prices:")
+for symbol, address, price1, price2 in different_prices:
+    print(f"Symbol: {symbol}, Address: {address}, Price in JSON1: {price1}, Price in JSON2: {price2}")
 
-tokens_only_in_json1 = tokens1 - tokens2
-print("Tokens only in json1:", tokens_only_in_json1)
-
-for token in json1_data:
-    if token["address"] in tokens2:
-        token2 = next(
-            t for t in json2_data if t["address"] == token["address"]
-        )
-
-        if token["price"] != token2["price"]:
-            print(
-                f"Token {token['symbol']} has different prices: "
-                f"{token['price']} (in json1) vs"
-                f" {token2['price']} (in json2)"
-            )
-    else:
-        print(f"Token {token['symbol']} is present in json1 but not in json2")
-
-tokens_only_in_json2 = tokens2 - tokens1
-print("Tokens only in json2:", tokens_only_in_json2)
+print("\nTokens with the same price:")
+for symbol, address, price in same_prices:
+    print(f"Symbol: {symbol}, Address: {address}, Price: {price}")

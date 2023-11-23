@@ -8,7 +8,7 @@ from app.settings import CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER
 
 cl_subgraph_url = (
     "https://graph.equilibrefinance.com/subgraphs/name/equilibre/"
-    "subgraph1/graphql"
+    "cl/graphql"
 )
 
 urls = [cl_subgraph_url]
