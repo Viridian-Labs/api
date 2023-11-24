@@ -152,12 +152,12 @@ class Token(Model):
                     if price > 0:
                         self.price = price
                         LOGGER.debug(
-                            f"Price for {self.symbol} fetched using {func_name}. "
+                            f"Price for {self.symbol} using {func_name}. "
                             f"Price {price}"
                         )
                         return price
                 except Exception as e:
-                    LOGGER.error(f"Error fetching price using {func_name}: {e}")
+                    LOGGER.error(f"Error fetching price {func_name}: {e}")
 
         return 0
 
