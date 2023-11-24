@@ -151,11 +151,13 @@ class Token(Model):
                     price = func()
                     if price > 0:
                         self.price = price
-                        LOGGER.debug(f"Price for {self.symbol} fetched using {func_name}. Price {price}")
+                        LOGGER.debug(
+                            f"Price for {self.symbol} fetched using {func_name}. "
+                            f"Price {price}"
+                        )
                         return price
                 except Exception as e:
                     LOGGER.error(f"Error fetching price using {func_name}: {e}")
-
 
         return 0
 
@@ -454,7 +456,7 @@ class Token(Model):
             price = self._get_direct_price(Token.find(other_token["address"]))
             if price > 0:
                 return price
-        return 0    
+        return 0
 
     def chain_price_in_stables_and_default_token(self):
         """Returns the price quoted from our router in stables/USDC
