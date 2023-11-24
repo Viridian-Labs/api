@@ -6,9 +6,7 @@ from decimal import Decimal
 
 import requests
 from app.cl.range_tvl import range_tvl
-
 from app.cl.subgraph import get_cl_subgraph_pools, get_cl_subgraph_tokens
-
 from app.settings import CACHE, LOGGER, NATIVE_TOKEN_ADDRESS
 from multicall import Call, Multicall
 
@@ -339,9 +337,7 @@ def get_cl_pools():
         pools = _fetch_pools()
         CACHE.set("cl_pools", json.dumps(pools))
     except Exception as e:
-        LOGGER.warning(
-                    f"Unable to fetch the pools from subgraph: {e}"
-                )
+        LOGGER.warning(f"Unable to fetch the pools from subgraph: {e}")
         # pools = json.loads(CACHE.get('cl_pools'))
         pools = {"tokens": []}
 

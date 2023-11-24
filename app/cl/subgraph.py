@@ -5,10 +5,8 @@ from app.cl.constants.tokenType import (Token_Type, token_type_dict,
                                         weth_address)
 from app.settings import CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER
 
-
 cl_subgraph_url = (
-    "https://graph.equilibrefinance.com/subgraphs/name/equilibre/"
-    "cl/graphql"
+    "https://graph.equilibrefinance.com/subgraphs/name/equilibre/" "cl/graphql"
 )
 
 urls = [cl_subgraph_url]

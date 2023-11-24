@@ -4,29 +4,17 @@ import time
 from typing import Dict, Union
 
 import requests
+from app.misc import ModelUteis
+from app.settings import (AXELAR_BLUECHIPS_ADDRESSES, BLUECHIP_TOKEN_ADDRESSES,
+                          CACHE, DEFAULT_TOKEN_ADDRESS, EXTERNAL_PRICE_ORDER,
+                          GET_PRICE_INTERNAL_FIRST, IGNORED_TOKEN_ADDRESSES,
+                          INTERNAL_PRICE_ORDER, LOGGER, NATIVE_TOKEN_ADDRESS,
+                          RETRY_DELAY, ROUTE_TOKEN_ADDRESSES, ROUTER_ADDRESS,
+                          STABLE_TOKEN_ADDRESS, TOKENLISTS)
 from multicall import Call, Multicall
 from walrus import BooleanField, FloatField, IntegerField, Model, TextField
 from web3.auto import w3
 from web3.exceptions import ContractLogicError
-
-from app.misc import ModelUteis
-from app.settings import (
-    AXELAR_BLUECHIPS_ADDRESSES,
-    BLUECHIP_TOKEN_ADDRESSES,
-    CACHE,
-    EXTERNAL_PRICE_ORDER,
-    GET_PRICE_INTERNAL_FIRST,
-    IGNORED_TOKEN_ADDRESSES,
-    INTERNAL_PRICE_ORDER,
-    LOGGER,
-    NATIVE_TOKEN_ADDRESS,
-    RETRY_DELAY,
-    ROUTE_TOKEN_ADDRESSES,
-    ROUTER_ADDRESS,
-    STABLE_TOKEN_ADDRESS,
-    TOKENLISTS,
-    DEFAULT_TOKEN_ADDRESS
-)
 
 DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/tokens/"
 DEFILLAMA_ENDPOINT = "https://coins.llama.fi/prices/current/"
@@ -70,7 +58,6 @@ class Token(Model):
     taxed = BooleanField(default=False)
     tax = FloatField(default=0)
     price_control = TextField()
-    
 
     DEXSCREENER_ENDPOINT = DEXSCREENER_ENDPOINT
     DEFILLAMA_ENDPOINT = DEFILLAMA_ENDPOINT
@@ -78,10 +65,7 @@ class Token(Model):
     DEBANK_ENDPOINT = DEBANK_ENDPOINT
 
     ROUTE_CONFIGURATIONS = [
-        {
-            "route_type": "direct", 
-            "method": "_get_direct_price"
-        },
+        {"route_type": "direct", "method": "_get_direct_price"},
         {
             "route_type": "axelar_bluechips",
             "method": "_get_price_through_tokens",
@@ -114,25 +98,25 @@ class Token(Model):
         },
         {
             "route_type": "chain_price_in_pairs",
-            "method": "chain_price_in_pairs"
+            "method": "chain_price_in_pairs",
         },
         {
             "route_type": "chain_price_in_liquid_staked",
-            "method": "chain_price_in_liquid_staked"
+            "method": "chain_price_in_liquid_staked",
         },
         {
             "route_type": "chain_price_in_stables_and_default_token",
-            "method": "chain_price_in_stables_and_default_token"
+            "method": "chain_price_in_stables_and_default_token",
         },
         {
             "route_type": "_get_price_from_defillama",
-            "method": "_get_price_from_defillama"
+            "method": "_get_price_from_defillama",
         },
         {
             "route_type": "_get_price_from_dexscreener",
-            "method": "_get_price_from_dexscreener"
+            "method": "_get_price_from_dexscreener",
         },
-    ]            
+    ]
 
     def get_price_external_source(self):
         """
@@ -167,7 +151,9 @@ class Token(Model):
                     price = func()
                     if price > 0:
                         self.price = price
-                        LOGGER.debug(f'Price for {self.symbol} fetched using {func_name}. Price {price}')
+                        LOGGER.debug(
+                            f"Price for {self.symbol} fetched using {func_name}. Price {price}"
+                        )
                         return price
                 except Exception as e:
                     LOGGER.error(
@@ -204,9 +190,11 @@ class Token(Model):
             if route_type in INTERNAL_PRICE_ORDER:
                 method_name = route_config["method"]
                 method = getattr(self, method_name)
-                try:                    
+                try:
                     if "token_addresses" in route_config:
-                        price = method(route_config["token_addresses"], stablecoin)
+                        price = method(
+                            route_config["token_addresses"], stablecoin
+                        )
                     elif method_name == "_get_direct_price":
                         price = method(stablecoin)
                     else:
@@ -218,7 +206,9 @@ class Token(Model):
 
                     time.sleep(RETRY_DELAY)
                 except Exception as e:
-                    LOGGER.error(f"Error fetching price using {route_type}: {e}")
+                    LOGGER.error(
+                        f"Error fetching price using {route_type}: {e}"
+                    )
 
             else:
                 LOGGER.error(f"Invalid route_type {route_type}")
@@ -246,12 +236,12 @@ class Token(Model):
                 ROUTER_ADDRESS,
                 [
                     "getAmountOut(uint256,address,address)(uint256,bool)",
-                    1 * 10 ** self.decimals,
+                    1 * 10**self.decimals,
                     self.address,
                     stablecoin.address,
                 ],
             )()
-            return amount / 10 ** stablecoin.decimals
+            return amount / 10**stablecoin.decimals
         except ContractLogicError:
             LOGGER.debug("Found error getting chain price for %s", self.symbol)
             return 0
@@ -280,7 +270,7 @@ class Token(Model):
                 )
 
                 if isinstance(amountB, int) and amountB > 0:
-                    total_price += amountB / 10 ** stablecoin.decimals
+                    total_price += amountB / 10**stablecoin.decimals
 
             except ContractLogicError as e:
                 LOGGER.error(
@@ -302,7 +292,7 @@ class Token(Model):
                     ROUTER_ADDRESS,
                     [
                         "getAmountOut(uint256,address,address)(uint256,bool)",
-                        1 * 10 ** self.decimals,
+                        1 * 10**self.decimals,
                         self.address,
                         token_address,
                     ],
@@ -351,7 +341,7 @@ class Token(Model):
             else:
                 LOGGER.error(f"Unable to fetch data for {token_address}")
                 return 0
-    
+
     def chain_price_in_bluechips(self):
         """Returns the price quoted from our router in stables/USDC
         passing through a bluechip route"""
@@ -367,7 +357,7 @@ class Token(Model):
                     ROUTER_ADDRESS,
                     [
                         "getAmountOut(uint256,address,address)(uint256,bool)",
-                        1 * 10 ** self.decimals,
+                        1 * 10**self.decimals,
                         self.address,
                         bluechip.address,
                     ],
@@ -382,7 +372,7 @@ class Token(Model):
                     ],
                 )()
                 if amountB > 0:
-                    return amountB / 10 ** stablecoin.decimals
+                    return amountB / 10**stablecoin.decimals
             except ContractLogicError:
                 return 0
 
@@ -407,7 +397,7 @@ class Token(Model):
                 ROUTER_ADDRESS,
                 [
                     "getAmountOut(uint256,address,address)(uint256,bool)",
-                    1 * 10 ** self.decimals,
+                    1 * 10**self.decimals,
                     self.address,
                     liquid.address,
                 ],
@@ -424,7 +414,7 @@ class Token(Model):
         except ContractLogicError:
             return 0
 
-        return amountB / 10 ** stablecoin.decimals
+        return amountB / 10**stablecoin.decimals
 
     def temporary_price_in_bluechips(self):
         mToken = Token.find(self.liquid_staked_address)
@@ -440,14 +430,14 @@ class Token(Model):
         except Exception as e:
             LOGGER.error(f"Failed to fetch pair data: {e}")
             return None
-        
+
         relevant_pairs = [
-                p for p in pairs_data
-                if self.address in [p["token0"]["address"], p["token1"]["address"]]
-            ]
-            
+            p
+            for p in pairs_data
+            if self.address in [p["token0"]["address"], p["token1"]["address"]]
+        ]
+
         price = self._calculate_price_from_pairs(relevant_pairs)
-            
 
         LOGGER.info(f"Saving price for token {self.symbol}: {price}")
         return price
@@ -486,39 +476,48 @@ class Token(Model):
                 return price
         return 0
 
-    def chain_price_in_stables_and_default_token(self):        
+    def chain_price_in_stables_and_default_token(self):
         """Returns the price quoted from our router in stables/USDC
         passing through default token route or some special cases"""
-        
-        LOGGER.debug("chain_price_in_stables_and_default_token price for %s", self.symbol)
 
+        LOGGER.debug(
+            "chain_price_in_stables_and_default_token price for %s",
+            self.symbol,
+        )
 
         # Peg it forever.
         if self.address == STABLE_TOKEN_ADDRESS:
             return 1.0
-        
+
         LOGGER.debug("Chain price NEW for %s", self.symbol)
         stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
-        
-      
+
         nativecoin = Token.find(NATIVE_TOKEN_ADDRESS)
         default_token = Token.find(DEFAULT_TOKEN_ADDRESS)
-        
+
         for token_address in ROUTE_TOKEN_ADDRESSES:
             token = Token.find(token_address)
-            
-            if (
-                self.symbol in ["CHAM", "GMD", "multiETH", "multiWBTC", "TV", "BIFI"]            
-            ):
-                stablecoin = Token.find("0xc86c7c0efbd6a49b35e8714c5f59d99de09a225b") # wKAVA
-           
-            if (
-                self.symbol in ["multiUSDT"]            
-            ):
-                stablecoin = Token.find("0xe1da44c0da55b075ae8e2e4b6986adc76ac77d73") # VARA 
-                
-                         
-            LOGGER.debug("%s CALC THROUGH for %s", self.symbol, stablecoin.symbol)
+
+            if self.symbol in [
+                "CHAM",
+                "GMD",
+                "multiETH",
+                "multiWBTC",
+                "TV",
+                "BIFI",
+            ]:
+                stablecoin = Token.find(
+                    "0xc86c7c0efbd6a49b35e8714c5f59d99de09a225b"
+                )  # wKAVA
+
+            if self.symbol in ["multiUSDT"]:
+                stablecoin = Token.find(
+                    "0xe1da44c0da55b075ae8e2e4b6986adc76ac77d73"
+                )  # VARA
+
+            LOGGER.debug(
+                "%s CALC THROUGH for %s", self.symbol, stablecoin.symbol
+            )
             try:
                 amountA, is_stable = Call(
                     ROUTER_ADDRESS,
@@ -540,20 +539,25 @@ class Token(Model):
                         stablecoin.address,
                     ],
                 )()
-                LOGGER.debug("AmountB for %s: %s", token.symbol, amountB)            
-                
-                if (
-                    self.symbol in ["CHAM", "GMD", "multiETH", "multiWBTC", "TV", "BIFI", "multiUSDT"]                    
-                ):                    
-                                        
+                LOGGER.debug("AmountB for %s: %s", token.symbol, amountB)
+
+                if self.symbol in [
+                    "CHAM",
+                    "GMD",
+                    "multiETH",
+                    "multiWBTC",
+                    "TV",
+                    "BIFI",
+                    "multiUSDT",
+                ]:
+
                     if amountB is not None and amountB > 0:
                         return amountB / 10**stablecoin.decimals
-                                                                                        
-                    
+
                 if token_address in [
                     "0xE3F5a90F9cb311505cd691a46596599aA1A0AD7D".lower(),
                     "0x818ec0A7Fe18Ff94269904fCED6AE3DaE6d6dC0b".lower(),
-                ]:                    
+                ]:
                     amountB, _ = Call(
                         ROUTER_ADDRESS,
                         [
@@ -577,8 +581,7 @@ class Token(Model):
 
                     if amountC is not None and amountC > 0:
                         return amountC / 10**stablecoin.decimals
-                                               
-                                                
+
                 if (
                     self.symbol in ["ACS", "BNB"]
                     and token_address == default_token.address
@@ -635,7 +638,6 @@ class Token(Model):
             except ContractLogicError:
                 return 0
 
-    
     @classmethod
     def from_chain(cls, address, logoURI=None):
         """Fetches and returns a token from chain."""
@@ -668,12 +670,12 @@ class Token(Model):
     def _get_price_from_dexscreener(self):
         try:
             res = requests.get(self.DEXSCREENER_ENDPOINT + self.address)
-            
+
             res.raise_for_status()
             data = res.json()
 
             pairs = data.get("pairs")
-            
+
             if pairs is None or not isinstance(pairs, list) or len(pairs) == 0:
                 # LOGGER.warning("Unexpected struct in Dexscreener response:\
                 # 'pairs' key missing, None, or not a non-empty list.")
@@ -687,26 +689,24 @@ class Token(Model):
                 and pair["quoteToken"]["address"].lower()
                 != self.address.lower()
             ]
-            #LOGGER.debug(f"Pairs in Kava: {pairs_in_kava}")
-            
-            
+            # LOGGER.debug(f"Pairs in Kava: {pairs_in_kava}")
+
             if len(pairs_in_kava) == 0:
                 price = str(pairs[0].get("priceUsd") or 0).replace(",", "")
             else:
-                price = str(pairs_in_kava[0].get("priceUsd") or 0).replace(",", "")
-            
+                price = str(pairs_in_kava[0].get("priceUsd") or 0).replace(
+                    ",", ""
+                )
+
             return float(price)
         except (requests.RequestException, ValueError, IndexError) as e:
             LOGGER.error("Error fetching price from Dexscreener: %s", e)
             return 0
 
     def _get_price_from_defillama(self) -> float:
-        
-        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        
+
         url = self.DEFILLAMA_ENDPOINT + "kava:" + self.address.lower()
-        print(url)
-        
+
         try:
             res = requests.get(url)
             res.raise_for_status()
@@ -759,7 +759,7 @@ class Token(Model):
             return res.json().get("price_usd", 0)
         except (requests.RequestException, ValueError) as e:
             LOGGER.error("Error fetching price from DexGuru: %s", e)
-            return 0    
+            return 0
 
     @classmethod
     def find(cls, address):
@@ -793,7 +793,7 @@ class Token(Model):
         our_chain_id = w3.eth.chain_id
         all_tokens = cls._fetch_all_tokens(our_chain_id)
 
-        return all_tokens   
+        return all_tokens
 
     @classmethod
     def _fetch_all_tokens(cls, our_chain_id):
@@ -820,12 +820,12 @@ class Token(Model):
         tokens = []
 
         try:
-            headers = {'Cache-Control': 'no-cache'}
-            res = requests.get(tlist, headers=headers).json()            
-            
+            headers = {"Cache-Control": "no-cache"}
+            res = requests.get(tlist, headers=headers).json()
+
             for token_data in res.get("tokens", []):
                 if cls._is_valid_token(token_data, our_chain_id):
-                    
+
                     token = cls._create_and_update_token(token_data)
                     tokens.append(token)
                 else:
@@ -855,7 +855,7 @@ class Token(Model):
         cls, token_data: Dict[str, Union[str, int]]
     ) -> "Token":
         """Creates and updates the token."""
-        
+
         address = token_data.get("address", "").lower()
         liquid_staked_address = token_data.get(
             "liquid_staked_address", ""
@@ -881,7 +881,6 @@ class Token(Model):
         token.tax = token_data.get("tax", False)
         token.price_control = token_data.get("price_control", "")
         token.decimals = token_data.get("decimals", 18)
-        
 
         token._update_price()
         return token
@@ -900,7 +899,7 @@ class Token(Model):
             "taxed": self.taxed,
             "tax": self.tax,
         }
-        
+
     def _update_price(self):
         start_time = time.time()
         ModelUteis.ensure_token_validity(self)
@@ -910,7 +909,7 @@ class Token(Model):
                 "Token %s is in the ignored list. Skipping update.",
                 self.symbol,
             )
-            return self._finalize_update(0, start_time)        
+            return self._finalize_update(0, start_time)
 
         if self.price_control:
             LOGGER.info(
@@ -918,52 +917,43 @@ class Token(Model):
                 self.symbol,
                 self.price_control,
             )
-            
-            print('1')
-            
+
             stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
-            
-            print('2')
-            
+
             if not stablecoin:
-                
-                print('3')
                 LOGGER.error("No stable coin found")
                 return 0
-            
-            print('4')
+
             for route_config in self.ROUTE_CONFIGURATIONS:
-                print('5')
                 route_type = route_config["route_type"]
-                print('6', route_type)
-                            
+
                 if self.price_control == route_type:
                     method_name = route_config["method"]
-                    print('7', method_name)
                     method = getattr(self, method_name)
 
                     try:
                         if "token_addresses" in route_config:
-                            print('8')  
-                            price_control_price = method(route_config["token_addresses"], stablecoin)
-                            print('9')
+                            price_control_price = method(
+                                route_config["token_addresses"], stablecoin
+                            )
                         else:
-                            print('10')
-                            price_control_price = method()  
-                            print('11')
+                            price_control_price = method()
 
                         if price_control_price > 0:
-                            print('12')
-                            return self._finalize_update(price_control_price, start_time)
-                                                                
+                            return self._finalize_update(
+                                price_control_price, start_time
+                            )
+
                     except Exception as e:
-                        LOGGER.error(f"Error fetching price using {route_type}: {e}")
-                                                                
-            
-        print('13')
-        
+                        LOGGER.error(
+                            f"Error fetching price using {route_type}: {e}"
+                        )
+
         # Price from blue chip addresses
-        if self.address in AXELAR_BLUECHIPS_ADDRESSES + BLUECHIP_TOKEN_ADDRESSES:
+        if (
+            self.address
+            in AXELAR_BLUECHIPS_ADDRESSES + BLUECHIP_TOKEN_ADDRESSES
+        ):
             external_price = self.get_price_external_source()
             return self._finalize_update(external_price, start_time)
 
@@ -972,13 +962,13 @@ class Token(Model):
             LOGGER.debug("Getting price internal first for %s", self.symbol)
             internal_price = self.get_price_internal_source()
             return self._finalize_update(internal_price, start_time)
-            
-        external_price = self.get_price_external_source()        
+
+        external_price = self.get_price_external_source()
         if external_price > 0:
             return self._finalize_update(external_price, start_time)
-            
+
         return self._finalize_update(0, start_time)
-        
+
     def _finalize_update(self, price, start_time):
         """Finalizes the update by setting the price and saving the token."""
 

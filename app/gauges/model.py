@@ -1,24 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from multicall import Call, Multicall
-from walrus import (
-    BooleanField,
-    FloatField,
-    HashField,
-    IntegerField,
-    Model,
-    TextField,
-)
-from web3.constants import ADDRESS_ZERO
-
 from app.assets import Token
-from app.settings import (
-    CACHE,
-    DEFAULT_TOKEN_ADDRESS,
-    LOGGER,
-    VOTER_ADDRESS,
-    WRAPPED_BRIBE_FACTORY_ADDRESS,
-)
+from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER, VOTER_ADDRESS,
+                          WRAPPED_BRIBE_FACTORY_ADDRESS)
+from multicall import Call, Multicall
+from walrus import (BooleanField, FloatField, HashField, IntegerField, Model,
+                    TextField)
+from web3.constants import ADDRESS_ZERO
 
 
 class Gauge(Model):

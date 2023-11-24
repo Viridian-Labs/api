@@ -1,13 +1,17 @@
 import json
+
 import requests
 
 # Fetching data from the APIs
-json1_data = requests.get("https://api.equilibrefinance.com/api/v1/assets").json()["data"]
+json1_data = requests.get(
+    "https://api.equilibrefinance.com/api/v1/assets"
+).json()["data"]
 json2_data = requests.get("http://localhost:8000/api/v1/assets").json()["data"]
 
 # Function to transform data into a dictionary with address as key
 def transform_data(data):
     return {token["address"]: token for token in data}
+
 
 # Transforming the data sets
 tokens1 = transform_data(json1_data)
@@ -31,7 +35,9 @@ for address, token1 in tokens1.items():
 # Displaying the results
 print("Tokens with different prices:")
 for symbol, address, price1, price2 in different_prices:
-    print(f"Symbol: {symbol}, Address: {address}, Price in JSON1: {price1}, Price in JSON2: {price2}")
+    print(
+        f"Symbol: {symbol}, Address: {address}, Price in JSON1: {price1}, Price in JSON2: {price2}"
+    )
 
 print("\nTokens with the same price:")
 for symbol, address, price in same_prices:
