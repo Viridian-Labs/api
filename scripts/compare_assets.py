@@ -12,6 +12,11 @@ def transform_data(data):
     return {token["address"]: token for token in data}
 
 
+# Function to check if prices are close and acceptable
+def are_prices_close(price1, price2, tolerance=0.3):
+    return abs(price1 - price2) < tolerance
+
+
 # Transforming the data sets
 tokens1 = transform_data(json1_data)
 tokens2 = transform_data(json2_data)
@@ -19,6 +24,7 @@ tokens2 = transform_data(json2_data)
 # Comparing the prices
 different_prices = []
 same_prices = []
+close_prices = []
 
 for address, token1 in tokens1.items():
     token2 = tokens2.get(address)
@@ -27,13 +33,23 @@ for address, token1 in tokens1.items():
         price2 = token2.get("price", 0)
         symbol = token1.get("symbol", "Unknown")
         if price1 != price2:
-            different_prices.append((symbol, address, price1, price2))
+            if are_prices_close(price1, price2):
+                close_prices.append((symbol, address, price1, price2))
+            else:
+                different_prices.append((symbol, address, price1, price2))
         else:
             same_prices.append((symbol, address, price1))
 
 # Displaying the results
 print("Tokens with different prices:")
 for symbol, address, price1, price2 in different_prices:
+    print(
+        f"Symbol: {symbol}, Address: {address}, "
+        f"Price in Prod: {price1}, Price in Stag: {price2}"
+    )
+
+print("\nTokens with close and acceptable prices:")
+for symbol, address, price1, price2 in close_prices:
     print(
         f"Symbol: {symbol}, Address: {address}, "
         f"Price in Prod: {price1}, Price in Stag: {price2}"

@@ -64,6 +64,13 @@ class Token(Model):
     DEXGURU_ENDPOINT = DEXGURU_ENDPOINT
     DEBANK_ENDPOINT = DEBANK_ENDPOINT
 
+    VALID_TOKEN_ADDRESSES_FOR_SYMBOL = {
+        "BEAR": ["0x818ec0A7Fe18Ff94269904fCED6AE3DaE6d6dC0b".lower()],
+        "multiETH": ["0xc86c7C0eFbd6A49B35E8714C5f59D99De09A225b".lower()],
+        "multiUSDT": ["0xE1da44C0dA55B075aE8E2e4b6986AdC76Ac77d73".lower()],
+        "multiWBTC": ["0xc86c7C0eFbd6A49B35E8714C5f59D99De09A225b".lower()],
+    }
+
     ROUTE_CONFIGURATIONS = [
         {"route_type": "direct", "method": "_get_direct_price"},
         {
@@ -80,16 +87,6 @@ class Token(Model):
             "route_type": "bluechip_tokens",
             "method": "_get_price_through_tokens",
             "token_addresses": BLUECHIP_TOKEN_ADDRESSES,
-        },
-        {
-            "route_type": "native_token",
-            "method": "_get_price_through_tokens",
-            "token_addresses": [NATIVE_TOKEN_ADDRESS],
-        },
-        {
-            "route_type": "stable_token",
-            "method": "_get_price_through_tokens",
-            "token_addresses": [STABLE_TOKEN_ADDRESS],
         },
         {
             "route_type": "route_token",
@@ -115,6 +112,14 @@ class Token(Model):
         {
             "route_type": "_get_price_from_dexscreener",
             "method": "_get_price_from_dexscreener",
+        },
+        {
+            "route_type": "chain_price_in_stable_and_tiger",
+            "method": "chain_price_in_stable_and_tiger",
+        },
+        {
+            "route_type": "use_liquid_staked_address",
+            "method": "use_liquid_staked_address",
         },
     ]
 
@@ -462,44 +467,27 @@ class Token(Model):
         """Returns the price quoted from our router in stables/USDC
         passing through default token route or some special cases"""
 
-        LOGGER.debug(
-            "chain_price_in_stables_and_default_token price for %s",
-            self.symbol,
-        )
-
         # Peg it forever.
         if self.address == STABLE_TOKEN_ADDRESS:
             return 1.0
 
         LOGGER.debug("Chain price NEW for %s", self.symbol)
-        stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
 
+        stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
         nativecoin = Token.find(NATIVE_TOKEN_ADDRESS)
         default_token = Token.find(DEFAULT_TOKEN_ADDRESS)
 
         for token_address in ROUTE_TOKEN_ADDRESSES:
-            token = Token.find(token_address)
 
-            if self.symbol in [
-                "CHAM",
-                "GMD",
-                "multiETH",
-                "multiWBTC",
-                "TV",
-                "BIFI",
-            ]:
-                stablecoin = Token.find(
-                    "0xc86c7c0efbd6a49b35e8714c5f59d99de09a225b"
-                )  # wKAVA
-
-            if self.symbol in ["multiUSDT"]:
-                stablecoin = Token.find(
-                    "0xe1da44c0da55b075ae8e2e4b6986adc76ac77d73"
-                )  # VARA
-
-            LOGGER.debug(
-                "%s CALC THROUGH for %s", self.symbol, stablecoin.symbol
+            valid_addresses = self.VALID_TOKEN_ADDRESSES_FOR_SYMBOL.get(
+                self.symbol, []
             )
+            if (
+                valid_addresses
+                and token_address.lower() not in valid_addresses
+            ):
+                continue
+
             try:
                 amountA, is_stable = Call(
                     ROUTER_ADDRESS,
@@ -510,7 +498,7 @@ class Token(Model):
                         token_address,
                     ],
                 )()
-                LOGGER.debug("AmountA for %s: %s", token.symbol, amountA)
+                # LOGGER.debug("AmountA for %s: %s", token.symbol, amountA)
 
                 amountB, _ = Call(
                     ROUTER_ADDRESS,
@@ -521,16 +509,10 @@ class Token(Model):
                         stablecoin.address,
                     ],
                 )()
-                LOGGER.debug("AmountB for %s: %s", token.symbol, amountB)
+                # LOGGER.debug("AmountB for %s: %s", token.symbol, amountB)
 
                 if self.symbol in [
-                    "CHAM",
-                    "GMD",
-                    "multiETH",
-                    "multiWBTC",
-                    "TV",
                     "BIFI",
-                    "multiUSDT",
                 ]:
 
                     if amountB is not None and amountB > 0:
@@ -569,45 +551,7 @@ class Token(Model):
                     and token_address == default_token.address
                 ):
                     continue
-                if self.symbol in ["DEXI"] and token.symbol == "multiUSDC":
-                    LOGGER.debug("DEXI especial case through LION")
-                    lion = Token.find(
-                        "0x990e157fC8a492c28F5B50022F000183131b9026"
-                    )
-                    amountA, _ = Call(
-                        ROUTER_ADDRESS,
-                        [
-                            "getAmountOut(uint256,address,address)"
-                            + "(uint256,bool)",
-                            1 * 10**self.decimals,
-                            self.address,
-                            lion.address,
-                        ],
-                    )()
-                    amountB, _ = Call(
-                        ROUTER_ADDRESS,
-                        [
-                            "getAmountOut(uint256,address,address)"
-                            + "(uint256,bool)",
-                            amountA,
-                            lion.address,
-                            token.address,
-                        ],
-                    )()
-                    amountC, _ = Call(
-                        ROUTER_ADDRESS,
-                        [
-                            "getAmountOut(uint256,address,address)"
-                            + "(uint256,bool)",
-                            amountB,
-                            token.address,
-                            stablecoin.address,
-                        ],
-                    )()
 
-                    if amountC is not None and amountC > 0:
-                        print("DEXI especial case through LION")
-                        return amountC / 10**stablecoin.decimals
                 if amountB is not None and amountB > 0:
                     return amountB / 10**stablecoin.decimals
                 # Special case for TVestige and UMBRA (calc from wKAVA)
@@ -619,6 +563,72 @@ class Token(Model):
                     return amountA * nativecoin.price
             except ContractLogicError:
                 return 0
+
+    def use_liquid_staked_address(self):
+        price = Token.find(self.liquid_staked_address.lower()).price
+        return price
+
+    def chain_price_in_stable_and_tiger(self):
+        return self.chain_price_in_stable_and_selected_route(
+            "0xfA9343C3897324496A05fC75abeD6bAC29f8A40f",
+            "0x990e157fC8a492c28F5B50022F000183131b9026",
+        )
+
+    def chain_price_in_stable_and_selected_route(
+        self, stable_route_addr, selected_route_addr
+    ):
+
+        token = Token.find(self.address)
+        stablecoin = Token.find(stable_route_addr)
+        selected_route = Token.find(selected_route_addr)
+
+        LOGGER.debug(
+            "Chain price for token %s in stable %s and selected route for %s",
+            self.symbol,
+            stablecoin.symbol,
+            selected_route.symbol,
+        )
+
+        amountA, _ = Call(
+            ROUTER_ADDRESS,
+            [
+                "getAmountOut(uint256,address,address)" + "(uint256,bool)",
+                1 * 10**self.decimals,
+                self.address,
+                selected_route.address,
+            ],
+        )()
+
+        LOGGER.debug("AmountA for %s: %s", token.symbol, amountA)
+
+        amountB, _ = Call(
+            ROUTER_ADDRESS,
+            [
+                "getAmountOut(uint256,address,address)" + "(uint256,bool)",
+                amountA,
+                selected_route.address,
+                token.address,
+            ],
+        )()
+
+        LOGGER.debug("AmountB for %s: %s", selected_route.symbol, amountB)
+
+        amountC, _ = Call(
+            ROUTER_ADDRESS,
+            [
+                "getAmountOut(uint256,address,address)" + "(uint256,bool)",
+                amountB,
+                token.address,
+                stablecoin.address,
+            ],
+        )()
+
+        LOGGER.debug("amountC for %s: %s", stablecoin.symbol, amountC)
+
+        if amountC is not None and amountC > 0:
+            return amountC / 10**stablecoin.decimals
+
+        return 0
 
     @classmethod
     def from_chain(cls, address, logoURI=None):
