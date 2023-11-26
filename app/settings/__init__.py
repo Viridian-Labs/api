@@ -169,7 +169,7 @@ def clear_cache():
 
 try:
     CACHE = Database.from_url(env("REDIS_URL"))
-    clear_cache()
+    # clear_cache()
     CACHE.ping()
 except (ValueError, redis.exceptions.ConnectionError):
     LOGGER.debug("No Redis server found, using memory ...")
