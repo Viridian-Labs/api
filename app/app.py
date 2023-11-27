@@ -47,10 +47,10 @@ app.add_route("/api/v1/supply", Supply())
 app.add_route("/api/v1/circulating-supply", CirculatingSupply())
 app.add_route("/api/v1/vara-price", VaraPrice())
 
-#app.add_route("/api/v2/voterClaimableRewards", Rewards())
-#app.add_route("/api/v2/cl-pools", get_cl_pools())
-#app.add_route("/api/v2/mixed-pairs", get_mixed_pairs())
-#app.add_route("/api/v2/unlimited-lge-chart", get_unlimited_lge_chart())
+# app.add_route("/api/v2/voterClaimableRewards", Rewards())
+# app.add_route("/api/v2/cl-pools", get_cl_pools())
+# app.add_route("/api/v2/mixed-pairs", get_mixed_pairs())
+# app.add_route("/api/v2/unlimited-lge-chart", get_unlimited_lge_chart())
 
 
 wsgi = WSGILogger(app, [StreamHandler(sys.stdout)], ApacheFormatter())
