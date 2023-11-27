@@ -9,10 +9,10 @@ import bjoern
 import falcon
 from app.assets import Assets
 from app.circulating import CirculatingSupply
-from app.cl.pools import get_cl_pools, get_mixed_pairs, get_unlimited_lge_chart
+# from app.cl.pools import get_cl_pools, get_mixed_pairs, get_unlimited_lge_chart
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.rewards import Rewards
+# from app.rewards import Rewards
 from app.settings import (CORS_ALLOWED_DOMAINS, LOGGER, PORT,
                           honeybadger_handler)
 from app.supply import Supply
