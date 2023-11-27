@@ -9,10 +9,8 @@ import bjoern
 import falcon
 from app.assets import Assets
 from app.circulating import CirculatingSupply
-# from app.cl.pools import get_cl_pools, get_mixed_pairs, get_unlimited_lge_chart
 from app.configuration import Configuration
 from app.pairs import Pairs
-# from app.rewards import Rewards
 from app.settings import (CORS_ALLOWED_DOMAINS, LOGGER, PORT,
                           honeybadger_handler)
 from app.supply import Supply
@@ -46,12 +44,6 @@ app.add_route("/api/v1/pairs", Pairs())
 app.add_route("/api/v1/supply", Supply())
 app.add_route("/api/v1/circulating-supply", CirculatingSupply())
 app.add_route("/api/v1/vara-price", VaraPrice())
-
-# app.add_route("/api/v2/voterClaimableRewards", Rewards())
-# app.add_route("/api/v2/cl-pools", get_cl_pools())
-# app.add_route("/api/v2/mixed-pairs", get_mixed_pairs())
-# app.add_route("/api/v2/unlimited-lge-chart", get_unlimited_lge_chart())
-
 
 wsgi = WSGILogger(app, [StreamHandler(sys.stdout)], ApacheFormatter())
 
