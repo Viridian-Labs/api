@@ -104,6 +104,8 @@ CORS_ALLOWED_DOMAINS = env("CORS_ALLOWED_DOMAINS", default=None)
 # Get the price from external Source - Defillama
 GET_PRICE_INTERNAL_FIRST = env("GET_PRICE_INTERNAL_FIRST", default=False)
 
+CLEAR_INITIAL_CACHE = env("CLEAR_INITIAL_CACHE", default=False)
+
 
 DEFAULT_DECIMAL = env("DEFAULT_DECIMAL", default=18)
 LOG_VERBOSE = env("LOG_VERBOSE", default="info")
@@ -158,18 +160,8 @@ def honeybadger_handler(req, resp, exc, params):
     app._python_error_handler(req, resp, exc, params)
 
 
-def clear_cache():
-    """Clears the entire cache (Redis database)."""
-    if CACHE:
-        CACHE.flushdb()
-        LOGGER.info("Cache cleared!")
-    else:
-        LOGGER.warning("Cache not initialized!")
-
-
 try:
     CACHE = Database.from_url(env("REDIS_URL"))
-    # clear_cache()
     CACHE.ping()
 except (ValueError, redis.exceptions.ConnectionError):
     LOGGER.debug("No Redis server found, using memory ...")

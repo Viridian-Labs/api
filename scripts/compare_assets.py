@@ -5,6 +5,7 @@ json1_data = requests.get(
     "https://api.equilibrefinance.com/api/v1/assets"
 ).json()["data"]
 json2_data = requests.get("http://localhost:8000/api/v1/assets").json()["data"]
+# json2_data = requests.get("https://apitest.equilibrefinance.com/api/v1/assets").json()["data"]
 
 
 # Function to transform data into a dictionary with address as key
@@ -12,9 +13,12 @@ def transform_data(data):
     return {token["address"]: token for token in data}
 
 
-# Function to check if prices are close and acceptable
-def are_prices_close(price1, price2, tolerance=0.3):
-    return abs(price1 - price2) < tolerance
+# Function to check if prices are close based on percentual difference
+def are_prices_close(price1, price2, percent_tolerance=0.05):
+    if price1 == 0 or price2 == 0:
+        return False  # Avoid division by zero
+    percent_difference = abs(price1 - price2) / max(price1, price2)
+    return percent_difference <= percent_tolerance
 
 
 # Transforming the data sets

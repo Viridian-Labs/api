@@ -6,8 +6,8 @@ from app.assets import Assets
 from app.circulating import CirculatingSupply
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.settings import (CACHE, LOGGER, SYNC_WAIT_SECONDS,
-                          reset_multicall_pool_executor)
+from app.settings import (CACHE, CLEAR_INITIAL_CACHE, LOGGER,
+                          SYNC_WAIT_SECONDS, reset_multicall_pool_executor)
 from app.vara import VaraPrice
 
 
@@ -88,8 +88,20 @@ class Syncer:
         reset_multicall_pool_executor()
 
 
+def clear_cache():
+    """Clears the entire cache (Redis database)."""
+    if CACHE:
+        CACHE.flushdb()
+        LOGGER.info("Cache cleared!")
+    else:
+        LOGGER.warning("Cache not initialized!")
+
+
 def sync_forever():
     LOGGER.info(f"Syncing every {SYNC_WAIT_SECONDS} seconds ...")
+
+    if CLEAR_INITIAL_CACHE:
+        clear_cache()
 
     while True:
         try:
