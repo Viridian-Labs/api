@@ -5,8 +5,6 @@ json1_data = requests.get(
     "https://api.equilibrefinance.com/api/v1/assets"
 ).json()["data"]
 json2_data = requests.get("http://localhost:8000/api/v1/assets").json()["data"]
-# json2_data = requests.get("https://apitest.equilibrefinance.com/api/v1/assets").json()["data"]
-
 
 # Function to transform data into a dictionary with address as key
 def transform_data(data):
