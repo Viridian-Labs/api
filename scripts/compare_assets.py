@@ -18,7 +18,7 @@ def are_prices_close(price1, price2, percent_tolerance=0.05):
 json1_url = "https://api.equilibrefinance.com/api/v1/assets"
 json1_data = requests.get(json1_url).json()["data"]
 
-json2_url = "http://localhost:8000/api/v1/assets"
+json2_url = "https://apitest.equilibrefinance.com/api/v1/assets"
 json2_data = requests.get(json2_url).json()["data"]
 
 tokens1 = transform_data(json1_data)
