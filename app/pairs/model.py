@@ -186,16 +186,14 @@ class Pair(Model):
     def _tvl(cls, pool_data, token0, token1):
         excluded_pools_map = {
             "vAMM-TORE/WKAVA": "0x1e221ea8d1440c3549942821412c03f101f5e99a",
-            "vAMM-TW1/TW2": "0xe6c4b59c291562fa7d9ff5b39c38e2a28294ec49"
+            "vAMM-TW1/TW2": "0xe6c4b59c291562fa7d9ff5b39c38e2a28294ec49",
         }
-
 
         try:
             # Check if pool address is in the excluded map
             if pool_data["symbol"] in excluded_pools_map:
                 print(f"Excluded pool {pool_data['symbol']}")
                 return 0  # TVL is set to zero for excluded pools
-
 
             tvl = 0
 
@@ -229,7 +227,6 @@ class Pair(Model):
         except Exception as e:
             LOGGER.error(f"Error TVL for pool {pool_data.get('symbol')}: {e}")
             return 0
-
 
         except Exception as e:
             LOGGER.error(f"Error TVL for pool {pool_data.get('symbol')}: {e}")

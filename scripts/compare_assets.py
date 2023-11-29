@@ -44,13 +44,17 @@ for address, token1 in tokens1.items():
 
 print("Tokens with different prices:")
 for symbol, address, price1, price2 in different_prices:
-    print(f"Symbol: {symbol}, Address: {address}, "
-          f"Price in Prod: {price1}, Price in Stag: {price2}")
+    print(
+        f"Symbol: {symbol}, Address: {address}, "
+        f"Price in Prod: {price1}, Price in Stag: {price2}"
+    )
 
 print("\nTokens with close and acceptable prices:")
 for symbol, address, price1, price2 in close_prices:
-    print(f"Symbol: {symbol}, Address: {address}, "
-          f"Price in Prod: {price1}, Price in Stag: {price2}")
+    print(
+        f"Symbol: {symbol}, Address: {address}, "
+        f"Price in Prod: {price1}, Price in Stag: {price2}"
+    )
 
 print("\nTokens with the same price:")
 for symbol, address, price in same_prices:
