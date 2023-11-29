@@ -5,12 +5,23 @@ from typing import Dict, Union
 
 import requests
 from app.misc import ModelUteis
-from app.settings import (AXELAR_BLUECHIPS_ADDRESSES, BLUECHIP_TOKEN_ADDRESSES,
-                          CACHE, DEFAULT_TOKEN_ADDRESS, EXTERNAL_PRICE_ORDER,
-                          GET_PRICE_INTERNAL_FIRST, IGNORED_TOKEN_ADDRESSES,
-                          INTERNAL_PRICE_ORDER, LOGGER, NATIVE_TOKEN_ADDRESS,
-                          RETRY_DELAY, ROUTE_TOKEN_ADDRESSES, ROUTER_ADDRESS,
-                          STABLE_TOKEN_ADDRESS, TOKENLISTS)
+from app.settings import (
+    AXELAR_BLUECHIPS_ADDRESSES,
+    BLUECHIP_TOKEN_ADDRESSES,
+    CACHE,
+    DEFAULT_TOKEN_ADDRESS,
+    EXTERNAL_PRICE_ORDER,
+    GET_PRICE_INTERNAL_FIRST,
+    IGNORED_TOKEN_ADDRESSES,
+    INTERNAL_PRICE_ORDER,
+    LOGGER,
+    NATIVE_TOKEN_ADDRESS,
+    RETRY_DELAY,
+    ROUTE_TOKEN_ADDRESSES,
+    ROUTER_ADDRESS,
+    STABLE_TOKEN_ADDRESS,
+    TOKENLISTS,
+)
 from multicall import Call, Multicall
 from walrus import BooleanField, FloatField, IntegerField, Model, TextField
 from web3.auto import w3
@@ -189,7 +200,15 @@ class Token(Model):
         if not stablecoin:
             LOGGER.error("No stable coin found")
             return 0
-
+        #!EXCPETIONS
+        if self.symbol in ["KTUSDC"]:
+            try:
+                price = self.chain_price_in_stable_and_tiger()
+                if price > 0:
+                    self.price = price
+                    return price
+            except Exception as e:
+                LOGGER.error(f"Error fetching price for {self.symbol}: {e}")
         for route_config in self.ROUTE_CONFIGURATIONS:
             route_type = route_config["route_type"]
             if route_type in INTERNAL_PRICE_ORDER:
@@ -204,7 +223,6 @@ class Token(Model):
                         price = method(stablecoin)
                     else:
                         price = method()
-
                     if price > 0:
                         self.price = price
                         return price
@@ -479,7 +497,6 @@ class Token(Model):
         default_token = Token.find(DEFAULT_TOKEN_ADDRESS)
 
         for token_address in ROUTE_TOKEN_ADDRESSES:
-
             valid_addresses = self.VALID_TOKEN_ADDRESSES_FOR_SYMBOL.get(
                 self.symbol, []
             )
@@ -515,7 +532,6 @@ class Token(Model):
                 if self.symbol in [
                     "BIFI",
                 ]:
-
                     if amountB is not None and amountB > 0:
                         return amountB / 10**stablecoin.decimals
 
@@ -571,18 +587,16 @@ class Token(Model):
         return price
 
     def chain_price_in_stable_and_tiger(self):
-
-        LOGGER.debug("DEXI especial case through LION")
+        LOGGER.debug(f"{self.symbol} especial case through LION")
 
         stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
 
         lion = Token.find("0x990e157fC8a492c28F5B50022F000183131b9026")
 
         for token_address in ROUTE_TOKEN_ADDRESSES:
-
             token = Token.find(token_address)
 
-            if self.symbol in ["DEXI"] and token.symbol == "multiUSDC":
+            if self.symbol in ["DEXI", "KTUSDC"] and token.symbol == "USDt":
                 LOGGER.debug("CALC THROUGH for %s", token.symbol)
 
                 try:
@@ -693,7 +707,6 @@ class Token(Model):
             return 0
 
     def _get_price_from_defillama(self) -> float:
-
         url = self.DEFILLAMA_ENDPOINT + "kava:" + self.address.lower()
 
         try:
@@ -814,7 +827,6 @@ class Token(Model):
 
             for token_data in res.get("tokens", []):
                 if cls._is_valid_token(token_data, our_chain_id):
-
                     token = cls._create_and_update_token(token_data)
                     tokens.append(token)
                 else:
