@@ -548,7 +548,7 @@ class Token(Model):
                         return amountC / 10**stablecoin.decimals
 
                 if (
-                    self.symbol in ["ACS", "BNB"]
+                    self.symbol in ["ACS", "multiBNB"]
                     and token_address == default_token.address
                 ):
                     continue

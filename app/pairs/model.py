@@ -168,22 +168,31 @@ class Pair(Model):
             data["isStable"] = data["stable"]
             data["totalSupply"] = data["total_supply"]
 
-            # Symbol Patch due to multichain issue
+            # Symbol Patch TORE
             if "vAMM-TORE/WKAVA" in data["symbol"]:
-                data["symbol"] = "vAMM-TOREv1/WKAVA"
+                if "0x443ab8d6ab303ce28f9031be91c19c6b92e59c8a" in data["token0_address"] and "0xc86c7c0efbd6a49b35e8714c5f59d99de09a225b   " in data["token1_address"]:
+                    data["symbol"] = "vAMM-TOREv1/WKAVA"
+                    
+            if "vAMM-TORE/VARA" in data["symbol"]:
+                if "0x443ab8d6ab303ce28f9031be91c19c6b92e59c8a" in data["token0_address"] or "0xe1da44c0da55b075ae8e2e4b6986adc76ac77d73" in data["token1_address"]:
+                    data["symbol"] = "vAMM-TOREv1/VARA"
+                    
+            # Symbol Patch BNB
+            if "vAMM-BNB" in data["symbol"]:
+                if "0xa034bf4c9092be31285c4cd7c5247b90c9f4faaf" in data["address"]:
+                    data["symbol"] = "vAMM-multiBNB/multiUSDC"
+                    
+                if "0x530b9201e1dbc11b596367428e5d344ebb636630" in data["address"]:
+                    data["symbol"] = "vAMM-multiBNB/VARA"
+                    
+            
 
             # Symbol Patch due to multichain issue
             if data["token0_address"] in MULTICHAIN_TOKEN_ADDRESSES:
-                aux_symbol = data["symbol"]
-                data["symbol"] = aux_symbol[:5] + "multi" + aux_symbol[5:]
+                data["symbol"] = data["symbol"].replace("/", "/multi")
             if data["token1_address"] in MULTICHAIN_TOKEN_ADDRESSES:
-                aux_symbol = data["symbol"]
-                slash_index = aux_symbol.find("/") + 1
-                data["symbol"] = (
-                    aux_symbol[:slash_index]
-                    + "multi"
-                    + aux_symbol[slash_index:]
-                )
+                slash_index = data["symbol"].find("/") + 1
+                data["symbol"] = data["symbol"][:slash_index] + "multi" + data["symbol"][slash_index:]
 
             cls.query_delete(cls.address == address.lower())
 
