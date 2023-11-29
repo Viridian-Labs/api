@@ -2,12 +2,9 @@
 
 import json
 import math
-from datetime import timedelta
 
 import falcon
 import requests
-from versiontools import Version
-
 from app import __version__
 from app.misc import JSONEncoder
 from app.pairs import Pair, Token
@@ -18,46 +15,56 @@ from app.settings import (
     ROUTE_TOKEN_ADDRESSES,
     STABLE_TOKEN_ADDRESS,
 )
+from versiontools import Version
 
 
 class Configuration(object):
     """Returns a app configuration object"""
 
-    # See: https://docs.dexscreener.com/#pairs
-    DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/pairs/kava/"
-    CACHE_KEY = "volume:json"
-    CACHE_TIME = timedelta(minutes=5)
+    @classmethod
+    def sync(cls):
+        cls.dexscreener_volume_data()
 
-    def dexscreener_volume_data(self):
+    @staticmethod
+    def dexscreener_volume_data():
         try:
+            DEXSCREENER_ENDPOINT = (
+                "https://api.dexscreener.com/latest/dex/pairs/kava/"
+            )
+            CACHE_KEY = "volume:json"
+
             volume_m5 = 0
             volume_h1 = 0
             volume_h6 = 0
             volume_h24 = 0
             pairs_addresses = [p.address for p in Pair.all()]
             n = math.ceil(len(pairs_addresses) / (len(pairs_addresses) % 30))
-            LOGGER.debug(n)
+
             pairs_addresses = [
-                pairs_addresses[i:i + n] for i in
-                range(0, len(pairs_addresses), n)
+                pairs_addresses[i : i + n]
+                for i in range(0, len(pairs_addresses), n)
             ]
             if pairs_addresses:
                 for sub_pair_group in pairs_addresses:
-
                     res = requests.get(
-                        self.DEXSCREENER_ENDPOINT + ",".join(sub_pair_group)
+                        DEXSCREENER_ENDPOINT + ",".join(sub_pair_group)
                     ).json()
+
                     pairs = res.get("pairs")
 
                     if pairs:
                         volume_m5 += sum(
-                            map(lambda p: (p["volume"]["m5"] or 0), pairs))
+                            map(lambda p: (p["volume"]["m5"] or 0), pairs)
+                        )
                         volume_h1 += sum(
-                            map(lambda p: (p["volume"]["h1"] or 0), pairs))
+                            map(lambda p: (p["volume"]["h1"] or 0), pairs)
+                        )
                         volume_h6 += sum(
-                            map(lambda p: (p["volume"]["h6"] or 0), pairs))
+                            map(lambda p: (p["volume"]["h6"] or 0), pairs)
+                        )
                         volume_h24 += sum(
-                            map(lambda p: (p["volume"]["h24"] or 0), pairs))
+                            map(lambda p: (p["volume"]["h24"] or 0), pairs)
+                        )
 
                 data = dict(
                     volume_m5=volume_m5,
@@ -65,23 +72,16 @@ class Configuration(object):
                     volume_h6=volume_h6,
                     volume_h24=volume_h24,
                 )
-                CACHE.setex(
-                    self.CACHE_KEY, self.CACHE_TIME, json.dumps(
-                        data, cls=JSONEncoder)
-                )
+                CACHE.set(CACHE_KEY, json.dumps(data, cls=JSONEncoder))
                 return data
             return dict(
-                volume_m5=None,
-                volume_h1=None,
-                volume_h6=None,
-                volume_h24=None)
+                volume_m5=None, volume_h1=None, volume_h6=None, volume_h24=None
+            )
         except Exception as e:
             LOGGER.error(e)
             return dict(
-                volume_m5=None,
-                volume_h1=None,
-                volume_h6=None,
-                volume_h24=None)
+                volume_m5=None, volume_h1=None, volume_h6=None, volume_h24=None
+            )
 
     def on_get(self, req, resp):
         default_token = Token.find(DEFAULT_TOKEN_ADDRESS)
@@ -106,11 +106,14 @@ class Configuration(object):
         else:
             tvl = None
             max_apr = None
-        if CACHE.get(self.CACHE_KEY):
-            volume = json.loads(CACHE.get(self.CACHE_KEY).decode("utf-8"))
+
+        if CACHE.get("volume:json"):
+            volume = json.loads(CACHE.get("volume:json").decode("utf-8"))
         else:
             volume = self.dexscreener_volume_data()
+
         resp.status = falcon.HTTP_200
+
         resp.text = json.dumps(
             dict(
                 data=route_token_data,

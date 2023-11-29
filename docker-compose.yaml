@@ -11,6 +11,7 @@ services:
   api:
     build:
       context: .
+      dockerfile: Dockerfile
       target: prod
     ports:
       - "8000:8000"
@@ -24,11 +25,13 @@ services:
   sync:
     build:
       context: .
+      dockerfile: Dockerfile
       target: sync
-    volumes:
-      - ./:/app
     networks:
       - backend
+    depends_on:
+      - redis
+      - api
     env_file:
       - .env
 

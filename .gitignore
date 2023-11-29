@@ -13,3 +13,8 @@ env
 
 # IDE
 .idea
+
+app.log
+scripts/json1.txt
+scripts/json2.txt
+.gitignore
