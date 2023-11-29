@@ -169,15 +169,15 @@ class Pair(Model):
             data["totalSupply"] = data["total_supply"]
 
             symbol_patches = {
-                "0x1e221ea8d1440c3549942821412c03f101f5e99a": 
+                "0x1e221ea8d1440c3549942821412c03f101f5e99a":
                     "vAMM-TOREv1/WKAVA",
-                "0xce3433baf2356e8404ca7dcc39eb61feda73e2c8": 
+                "0xce3433baf2356e8404ca7dcc39eb61feda73e2c8":
                     "vAMM-TOREv1/VARA",
-                "0x1ae83a1b9ee963213d1e3ff337f92930582d304f": 
+                "0x1ae83a1b9ee963213d1e3ff337f92930582d304f":
                     "vAMM-TOREv2/WKAVA",
-                "0xa034bf4c9092be31285c4cd7c5247b90c9f4faaf": 
+                "0xa034bf4c9092be31285c4cd7c5247b90c9f4faaf":
                     "vAMM-multiBNB/multiUSDC",
-                "0x530b9201e1dbc11b596367428e5d344ebb636630": 
+                "0x530b9201e1dbc11b596367428e5d344ebb636630":
                     "vAMM-multiBNB/VARA",
             }
 
