@@ -5,23 +5,12 @@ from typing import Dict, Union
 
 import requests
 from app.misc import ModelUteis
-from app.settings import (
-    AXELAR_BLUECHIPS_ADDRESSES,
-    BLUECHIP_TOKEN_ADDRESSES,
-    CACHE,
-    DEFAULT_TOKEN_ADDRESS,
-    EXTERNAL_PRICE_ORDER,
-    GET_PRICE_INTERNAL_FIRST,
-    IGNORED_TOKEN_ADDRESSES,
-    INTERNAL_PRICE_ORDER,
-    LOGGER,
-    NATIVE_TOKEN_ADDRESS,
-    RETRY_DELAY,
-    ROUTE_TOKEN_ADDRESSES,
-    ROUTER_ADDRESS,
-    STABLE_TOKEN_ADDRESS,
-    TOKENLISTS,
-)
+from app.settings import (AXELAR_BLUECHIPS_ADDRESSES, BLUECHIP_TOKEN_ADDRESSES,
+                          CACHE, DEFAULT_TOKEN_ADDRESS, EXTERNAL_PRICE_ORDER,
+                          GET_PRICE_INTERNAL_FIRST, IGNORED_TOKEN_ADDRESSES,
+                          INTERNAL_PRICE_ORDER, LOGGER, NATIVE_TOKEN_ADDRESS,
+                          RETRY_DELAY, ROUTE_TOKEN_ADDRESSES, ROUTER_ADDRESS,
+                          STABLE_TOKEN_ADDRESS, TOKENLISTS)
 from multicall import Call, Multicall
 from walrus import BooleanField, FloatField, IntegerField, Model, TextField
 from web3.auto import w3
@@ -209,6 +198,16 @@ class Token(Model):
                     return price
             except Exception as e:
                 LOGGER.error(f"Error fetching price for {self.symbol}: {e}")
+
+        if self.symbol in ["TORE"]:
+            try:
+                price = self.chain_price_in_stables_and_default_token()
+                if price > 0:
+                    self.price = price
+                    return price
+            except Exception as e:
+                LOGGER.error(f"Error fetching price for {self.symbol}: {e}")
+
         for route_config in self.ROUTE_CONFIGURATIONS:
             route_type = route_config["route_type"]
             if route_type in INTERNAL_PRICE_ORDER:
@@ -575,6 +574,7 @@ class Token(Model):
                 if token_address == nativecoin.address and self.symbol in [
                     "TV",
                     "UMBRA",
+                    "TORE",
                 ]:
                     amountA = amountA / 10**nativecoin.decimals
                     return amountA * nativecoin.price

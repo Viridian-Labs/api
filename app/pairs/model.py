@@ -168,40 +168,18 @@ class Pair(Model):
             data["isStable"] = data["stable"]
             data["totalSupply"] = data["total_supply"]
 
-            # Symbol Patch TORE
-            if "vAMM-TORE/WKAVA" in data["symbol"]:
-                if (
-                    "0x443ab8d6ab303ce28f9031be91c19c6b92e59c8a"
-                    in data["token0_address"]
-                    and "0xc86c7c0efbd6a49b35e8714c5f59d99de09a225b   "
-                    in data["token1_address"]
-                ):
-                    data["symbol"] = "vAMM-TOREv1/WKAVA"
+            symbol_patches = {
+                "0x1e221ea8d1440c3549942821412c03f101f5e99a": "vAMM-TOREv1/WKAVA",
+                "0xce3433baf2356e8404ca7dcc39eb61feda73e2c8": "vAMM-TOREv1/VARA",
+                "0x1ae83a1b9ee963213d1e3ff337f92930582d304f": "vAMM-TOREv2/WKAVA",
+                "0xa034bf4c9092be31285c4cd7c5247b90c9f4faaf": "vAMM-multiBNB/multiUSDC",
+                "0x530b9201e1dbc11b596367428e5d344ebb636630": "vAMM-multiBNB/VARA",
+            }
 
-            if "vAMM-TORE/VARA" in data["symbol"]:
-                if (
-                    "0x443ab8d6ab303ce28f9031be91c19c6b92e59c8a"
-                    in data["token0_address"]
-                    or "0xe1da44c0da55b075ae8e2e4b6986adc76ac77d73"
-                    in data["token1_address"]
-                ):
-                    data["symbol"] = "vAMM-TOREv1/VARA"
+            for address, symbol in symbol_patches.items():
+                if address in data["address"]:
+                    data["symbol"] = symbol
 
-            # Symbol Patch BNB
-            if "vAMM-BNB" in data["symbol"]:
-                if (
-                    "0xa034bf4c9092be31285c4cd7c5247b90c9f4faaf"
-                    in data["address"]
-                ):
-                    data["symbol"] = "vAMM-multiBNB/multiUSDC"
-
-                if (
-                    "0x530b9201e1dbc11b596367428e5d344ebb636630"
-                    in data["address"]
-                ):
-                    data["symbol"] = "vAMM-multiBNB/VARA"
-
-            # Symbol Patch due to multichain issue
             if data["token0_address"] in MULTICHAIN_TOKEN_ADDRESSES:
                 data["symbol"] = data["symbol"].replace("/", "/multi")
             if data["token1_address"] in MULTICHAIN_TOKEN_ADDRESSES:
@@ -230,15 +208,13 @@ class Pair(Model):
     @classmethod
     def _tvl(cls, pool_data, token0, token1):
         excluded_pools_map = {
-            "vAMM-TORE/WKAVA": "0x1e221ea8d1440c3549942821412c03f101f5e99a",
             "vAMM-TW1/TW2": "0xe6c4b59c291562fa7d9ff5b39c38e2a28294ec49",
         }
 
         try:
-            # Check if pool address is in the excluded map
             if pool_data["symbol"] in excluded_pools_map:
-                print(f"Excluded pool {pool_data['symbol']}")
-                return 0  # TVL is set to zero for excluded pools
+                LOGGER.debug(f"Excluded pool {pool_data['symbol']}")
+                return 0
 
             tvl = 0
 
@@ -268,10 +244,6 @@ class Pair(Model):
                 tvl,
             )
             return tvl
-
-        except Exception as e:
-            LOGGER.error(f"Error TVL for pool {pool_data.get('symbol')}: {e}")
-            return 0
 
         except Exception as e:
             LOGGER.error(f"Error TVL for pool {pool_data.get('symbol')}: {e}")
