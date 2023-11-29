@@ -200,7 +200,7 @@ class Token(Model):
         if not stablecoin:
             LOGGER.error("No stable coin found")
             return 0
-        #!EXCPETIONS
+        # !EXCPETIONS
         if self.symbol in ["KTUSDC"]:
             try:
                 price = self.chain_price_in_stable_and_tiger()
