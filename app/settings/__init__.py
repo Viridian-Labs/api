@@ -70,6 +70,10 @@ RETRY_DELAY = env("RETRY_DELAY", default=10)
 
 RETRY_COUNT = env("RETRY_COUNT", default=3)
 
+MULTICHAIN_TOKEN_ADDRESSES = (
+    env("MULTICHAIN_TOKEN_ADDRESSES", default="").lower().split(",")
+)
+
 
 INTERNAL_PRICE_ORDER = env(
     "INTERNAL_PRICE_ORDER",

@@ -5,7 +5,8 @@ import time
 from app.assets import Token
 from app.gauges import Gauge
 from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, FACTORY_ADDRESS,
-                          LOGGER, RETRY_COUNT, RETRY_DELAY, VOTER_ADDRESS)
+                          LOGGER, MULTICHAIN_TOKEN_ADDRESSES, RETRY_COUNT,
+                          RETRY_DELAY, VOTER_ADDRESS)
 from multicall import Call, Multicall
 from walrus import BooleanField, FloatField, IntegerField, Model, TextField
 from web3.constants import ADDRESS_ZERO
@@ -166,6 +167,23 @@ class Pair(Model):
 
             data["isStable"] = data["stable"]
             data["totalSupply"] = data["total_supply"]
+
+            # Symbol Patch due to multichain issue
+            if "vAMM-TORE/WKAVA" in data["symbol"]:
+                data["symbol"] = "vAMM-TOREv1/WKAVA"
+
+            # Symbol Patch due to multichain issue
+            if data["token0_address"] in MULTICHAIN_TOKEN_ADDRESSES:
+                aux_symbol = data["symbol"]
+                data["symbol"] = aux_symbol[:5] + "multi" + aux_symbol[5:]
+            if data["token1_address"] in MULTICHAIN_TOKEN_ADDRESSES:
+                aux_symbol = data["symbol"]
+                slash_index = aux_symbol.find("/") + 1
+                data["symbol"] = (
+                    aux_symbol[:slash_index]
+                    + "multi"
+                    + aux_symbol[slash_index:]
+                )
 
             cls.query_delete(cls.address == address.lower())
 
