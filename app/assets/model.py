@@ -458,7 +458,7 @@ class Token(Model):
     def chain_price_in_pairs(self):
         try:
             pairs_data = requests.get(
-                "https://api.equilibrefinance.com/api/v1/pairs"
+                "https://api.old.equilibrefinance.com/api/v1/pairs"
             ).json()["data"]
         except Exception as e:
             LOGGER.error(f"Failed to fetch pair data: {e}")
