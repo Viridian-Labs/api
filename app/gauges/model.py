@@ -1,11 +1,22 @@
 # -*- coding: utf-8 -*-
 
 from app.assets import Token
-from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER, VOTER_ADDRESS,
-                          WRAPPED_BRIBE_FACTORY_ADDRESS)
+from app.settings import (
+    CACHE,
+    DEFAULT_TOKEN_ADDRESS,
+    LOGGER,
+    VOTER_ADDRESS,
+    WRAPPED_BRIBE_FACTORY_ADDRESS,
+)
 from multicall import Call, Multicall
-from walrus import (BooleanField, FloatField, HashField, IntegerField, Model,
-                    TextField)
+from walrus import (
+    BooleanField,
+    FloatField,
+    HashField,
+    IntegerField,
+    Model,
+    TextField,
+)
 from web3.constants import ADDRESS_ZERO
 
 
@@ -98,10 +109,9 @@ class Gauge(Model):
             )()
             data.update(data_calls)
 
-            # COMMENTED OUT FOR NOW DUE TO ERRORS IN DAPP
-            # if not data.get("isAlive"):
-            #     LOGGER.warning(f"Gauge {address} is not Alive.")
-            #     return None
+            if not data.get("isAlive"):
+                LOGGER.warning(f"Gauge {address} is not Alive.")
+                return None
 
             data["total_supply"] = data["total_supply"] / cls.DEFAULT_DECIMALS
 
