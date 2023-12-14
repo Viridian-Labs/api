@@ -52,6 +52,9 @@ class Gauge(Model):
     tbv = FloatField(default=0.0)
     votes = FloatField(default=0.0)
     apr = FloatField(default=0.0)
+    bribes_apr = FloatField(default=0.0)
+    fees_apr = FloatField(default=0.0)
+    rebase_apr = FloatField(default=0.0)
     isAlive = BooleanField(default=False)
     total_fees = FloatField(default=0.0)
     total_bribes = FloatField(default=0.0)
@@ -226,7 +229,7 @@ class Gauge(Model):
             token = Token.find(DEFAULT_TOKEN_ADDRESS)
             votes = votes / 10 ** token.decimals
 
-            gauge.apr = cls.rebase_apr()
+            gauge.apr = gauge.rebase_apr = cls.rebase_apr()
             if token.price and votes * token.price > 0:
                 gauge.votes = votes
                 gauge.apr += ((gauge.tbv * 52) / (votes * token.price)) * 100
@@ -282,7 +285,6 @@ class Gauge(Model):
                 if token is not None:
                     token_bribes = amount / 10 ** token.decimals
                     gauge.rewards[token.address] = token_bribes
-                    gauge.total_bribes += token_bribes
                     gauge.bribes[token.address] = token_bribes
 
                     LOGGER.debug(
@@ -294,6 +296,8 @@ class Gauge(Model):
 
                     if token.price:
                         gauge.tbv += token_bribes * token.price
+                        gauge.total_bribes += token_bribes * token.price
+                        
 
             gauge.save()
         except Exception as e:
@@ -337,8 +341,7 @@ class Gauge(Model):
                 )
 
                 token = Token.find(token_address_str)
-                token_fees = fee / 10 ** token.decimals
-                gauge.total_fees += token_fees
+                token_fees = fee / 10**token.decimals
 
                 if gauge.rewards.get(token_address):
                     gauge.rewards[token_address] = (
@@ -356,7 +359,9 @@ class Gauge(Model):
                     )
 
                 if token.price:
-                    gauge.tbv += fee / 10 ** token.decimals * token.price
+                    gauge.tbv += fee / 10**token.decimals * token.price
+                    gauge.total_fees += token_fees * token.price
+                    
 
             gauge.save()
 
