@@ -232,8 +232,8 @@ class Token(Model):
                 * other_token.price
             )
             LOGGER.debug(
-                f"Price for {self.symbol} and route token {other_token.symbol}:\
-                {temp_price}"
+                f"Price for {self.symbol} and route token {other_token.symbol}"
+                f":{temp_price}"
             )
             if temp_price > 0:
                 prices.append(
@@ -294,8 +294,8 @@ class Token(Model):
 
         except ContractLogicError:
             LOGGER.debug(
-                f"Error getting amount out for {self.symbol}\
-                and route token {route_token.symbol}"
+                f"Error getting amount out for {self.symbol}"
+                f"and route token {route_token.symbol}"
             )
             return 0
 
@@ -331,9 +331,9 @@ class Token(Model):
                 # )()
 
                 LOGGER.debug(
-                    f"Amount out: {amount},\
-                    route token decimals: {route_token.decimals},\
-                    route token price: {route_token.price}"
+                    f"Amount out: {amount},"
+                    f"route token decimals: {route_token.decimals},"
+                    f"route token price: {route_token.price}"
                 )
                 if route_token.price > 0 and amount > 0:
                     return (
@@ -344,8 +344,8 @@ class Token(Model):
                     )
             except ContractLogicError:
                 LOGGER.debug(
-                    f"Error getting amount out for {self.symbol}\
-                    and route token {route_token.symbol}"
+                    f"Error getting amount out for {self.symbol}"
+                    f"and route token {route_token.symbol}"
                 )
                 return 0
 
@@ -424,9 +424,9 @@ class Token(Model):
 
             if "coins" not in data or not isinstance(data["coins"], dict):
                 LOGGER.error(
-                    f"Unexpected structure in DefiLlama response for token \
-                        {self.address}: 'coins' key missing or \
-                            not a dictionary."
+                    f"Unexpected structure in DefiLlama response for token"
+                    f"{self.address}: 'coins' key missing or"
+                    f"not a dictionary."
                 )
                 return 0
 
@@ -443,8 +443,8 @@ class Token(Model):
 
         except (requests.RequestException, ValueError) as e:
             LOGGER.error(
-                f"Error fetching price from DefiLlama for token \
-                    {self.address} using URL {url}: {e}"
+                f"Error fetching price from DefiLlama for token"
+                f"{self.address} using URL {url}: {e}"
             )
             return 0
 
@@ -665,10 +665,10 @@ class Token(Model):
 
         self.price = price
         LOGGER.debug(
-            f"Token {self.symbol}:\
-            {self.price_control},\
-            {self.stable_route},\
-            {self.liquid_staked_address}"
+            f"Token {self.symbol}:"
+            f"{self.price_control},"
+            f"{self.stable_route},"
+            f"{self.liquid_staked_address}"
         )
         self.save()
         elapsed_time = time.time() - start_time
