@@ -3,6 +3,7 @@
 import json
 
 import falcon
+
 from app.misc import JSONEncoder
 from app.settings import CACHE, LOGGER, TOKEN_CACHE_EXPIRATION
 

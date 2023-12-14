@@ -2,14 +2,22 @@
 
 import time
 
-from app.assets import Token
-from app.gauges import Gauge
-from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, FACTORY_ADDRESS,
-                          LOGGER, MULTICHAIN_TOKEN_ADDRESSES, RETRY_COUNT,
-                          RETRY_DELAY, VOTER_ADDRESS)
 from multicall import Call, Multicall
 from walrus import BooleanField, FloatField, IntegerField, Model, TextField
 from web3.constants import ADDRESS_ZERO
+
+from app.assets import Token
+from app.gauges import Gauge
+from app.settings import (
+    CACHE,
+    DEFAULT_TOKEN_ADDRESS,
+    FACTORY_ADDRESS,
+    LOGGER,
+    MULTICHAIN_TOKEN_ADDRESSES,
+    RETRY_COUNT,
+    RETRY_DELAY,
+    VOTER_ADDRESS,
+)
 
 
 class Pair(Model):
@@ -155,8 +163,8 @@ class Pair(Model):
             token1 = Token.find(data["token1_address"])
 
             if token0 and token1:
-                data["reserve0"] = data["reserve0"] / (10**token0.decimals)
-                data["reserve1"] = data["reserve1"] / (10**token1.decimals)
+                data["reserve0"] = data["reserve0"] / (10 ** token0.decimals)
+                data["reserve1"] = data["reserve1"] / (10 ** token1.decimals)
 
             if data.get("gauge_address") in (ADDRESS_ZERO, None):
                 data["gauge_address"] = None
@@ -175,18 +183,15 @@ class Pair(Model):
                     "vAMM-TOREv1/VARA",
                 "0x1ae83a1b9ee963213d1e3ff337f92930582d304f":
                     "vAMM-TOREv2/WKAVA",
-                "0xa034bf4c9092be31285c4cd7c5247b90c9f4faaf":
-                    "vAMM-multiBNB/multiUSDC",
-                "0x530b9201e1dbc11b596367428e5d344ebb636630":
-                    "vAMM-multiBNB/VARA",
             }
-
-            for address, symbol in symbol_patches.items():
-                if address in data["address"]:
+            for address_map, symbol in symbol_patches.items():
+                if address_map in data["address"]:
                     data["symbol"] = symbol
+                    LOGGER.debug(f"Symbol changed: {data['symbol']}")
 
             if data["token0_address"] in MULTICHAIN_TOKEN_ADDRESSES:
-                data["symbol"] = data["symbol"].replace("/", "/multi")
+                aux_symbol = data["symbol"]
+                data["symbol"] = aux_symbol[:5] + "multi" + aux_symbol[5:]
             if data["token1_address"] in MULTICHAIN_TOKEN_ADDRESSES:
                 slash_index = data["symbol"].find("/") + 1
                 data["symbol"] = (
@@ -194,8 +199,10 @@ class Pair(Model):
                     + "multi"
                     + data["symbol"][slash_index:]
                 )
-
-            cls.query_delete(cls.address == address.lower())
+            try:
+                cls.query_delete(cls.address == address.lower())
+            except Exception as e:
+                LOGGER.error(f"Error deleting pair {address}: {e}")
 
             pair = cls.create(**data)
             LOGGER.debug(

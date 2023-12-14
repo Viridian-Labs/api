@@ -22,61 +22,37 @@ This command initiates three services:
 
 ## **Overview of Price Strategy**
 
-The Price Strategy is engineered to meticulously fetch the most accurate and reliable token prices by leveraging both internal and external data sources. It methodically assesses these sources in a predetermined sequence until a valid price is unearthed.
+The price strategy is the core of the application, and it's responsible for fetching and updating token prices. This section provides an overview of the strategy's operational mechanics, price flow, and configuration options.
 
-### **Operational Mechanics of the Strategy:**
+### **Price Strategy:**
 
-1. **Classification of Data Sources**:
-   - Primarily, two data sources are harnessed: internal contracts and external data from reputable APIs like Coingecko, DeFiLlama, and Debank.
-   - Setting `GET_PRICE_INTERNAL_FIRST=True` in the `.env` file prioritizes fetching prices internally for more precise pricing derived from  blockchain. Initially, the script explores contracts utilizing token pairs and adjustable internal routes. Should no price be identified, the external data source is engaged, probing for liquidity on corresponding pairs and liquidity staked addresses.
-   - Note: Fetching from internal sources only may extend the synchronization time.
+As we cannot determine the price of every token based on selecting arbitrary pairs, we've devised a strategy that takes into account different sources and methods. The strategy is as follows:
 
-2. **Determining the Order of Sources**:
-   - The `GET_PRICE_INTERNAL_FIRST` configuration guides the strategy in prioritizing either internal or external sources.
-   - The sequence of function calls for fetching data internally or externally can be tailored using `INTERNAL_PRICE_ORDER` and `EXTERNAL_PRICE_ORDER`.
+- We have developed an algo that determines prices through the reserves of the pairs that the token is in. For optimization purposes we limit the pairs to the ones that the user can configure in the .env file (`ROUTE_TOKEN_ADDRESSES`).
+    > :warning: Expect this to be upgraded in the future as we learn more about this topic.
+- From the previous versions we are maintaining the **`getAmount()`** function to get the price of the token based on a stable or another token with price (Normally a native, should be tokens which we are sure of their value). This will be used if we know also that we are not suffering any price action on the token that can mess up the calculation.
+- Also, we have maintained the **external price** fetching from the previous versions and is programmed as a fallback for the both above.
 
-3. **Direct Source Invocation**:
-   - The 'price_control' key within tokenList enables a direct function call, bypassing the standard sequence. Example:
+In order to enter manual configurations to the price fetching, we have added a `price_control` and the `stable_route` field in the token configuration. One field can be used to specify a route to explore in the `getAmount()` function. The other can be used to specify the route is trhough a stable token.
 
+Example:
 ```json
 {
   "chainId": 2222,
   "name": "SHRAP",
   "symbol": "xSHRAP",
-  "price_control": "chain_price_in_pairs",
-}
+  "price_control": "0x123....3123",
+},
+{
+  "chainId": 2222,
+  "name": "WKAVA",
+  "symbol": "WKAVA",
+  "stable_route": "true",
+},
 ```
+> Note that we are not using both attributes in the same token at the same time.
 
-   In this case, the 'chain_price_in_pairs' function is invoked to compute the price for this token, sidestepping other checks and going directly to that function call.
-
-   Further examples illustrate utilizing different functions based on the token's configuration, like `chain_price_in_bluechips` and `chain_price_in_liquid_staked`, to derive the price, each serving a unique purpose based on the token's attributes.
-
-### **Dissecting the Price Flow:**
-
-The `_update_price` method orchestrates the process of updating a blockchain token's price by evaluating various conditions and harnessing different pricing information sources. Here's an elaborated breakdown of the method's flow:
-
-- **Ignored Token Verification**:
-    - If the token resides in the `IGNORED_TOKEN_ADDRESSES` list, an error is logged, and the update concludes with a price of 0.
-
-- **Price Control Verification**:
-    - If price_control is designated for the token, the system endeavors to retrieve the price utilizing a method specified by price_control. Should the method exist, the price is updated; otherwise, an informational message is logged, the price is set to 0, and the price flow progresses.
-
-- **External Source Verification for Special Addresses**:
-    - If the token address is in a list of special addresses (`AXELAR_BLUECHIPS_ADDRESSES` or `BLUECHIP_TOKEN_ADDRESSES`), the method fetches the price from an external source.
-
-- **Internal or External Price Retrieval**:
-    - Depending on the `GET_PRICE_INTERNAL_FIRST` flag, the method either:
-        - Tries to fetch the price from internal sources first, and if unsuccessful, fetches from external sources.
-        - Or fetches from both internal and external sources, updating the price with whichever source returns a valid price first.
-
-- **Chain Price Fallback**:
-    - If the price is still 0, it attempts to fetch the price using the `chain_price_in_liquid_staked()` method.
-
-- **Temporary Price for Special Addresses**:
-    - If the price is still 0 and the token address is in `AXELAR_BLUECHIPS_ADDRESSES`, it sets a temporary price using the `temporary_price_in_bluechips()` method.
-
-
-### **Detailed Function Explanations:**
+### **Quick Insights of the Functions:**
 
 **External Price Fetching**:
 
@@ -85,20 +61,21 @@ The `_update_price` method orchestrates the process of updating a blockchain tok
 
 **Internal Price Fetching**:
 
-- `get_price_internal_source` method:
-    - Circulates through internal price getter methods defined in `INTERNAL_PRICE_ORDER` through `ROUTE_CONFIGURATIONS`, invoking each to fetch the price, and returning the price from the first successful fetch.
+- `_get_direct_price` method:
+    - Fetches the price of a token using the Router configured in `ROUTE_TOKEN_ADDRESSES`.
+
+- `chain_price_in_route_tokens_reserves` method:
+    - Fetches the price of a token using the reserves of the pairs that the token is in between the `ROUTE_TOKEN_ADDRESSES`. Algo is applied here.
 
 **Price Update**:
 
-- `_update_price` method:
-    - Choreographs the price updating process by deciding the fetching order (internal first or external first) based on `GET_PRICE_INTERNAL_FIRST`. Invokes either `get_price_internal_source` or `get_price_external_source` methods or both to fetch and update the price.
+- `price_feed` method:
+    - Handles the price update process. Wraps every method explained above and returns the price of the token.
 
 ### **Configuration Options:**
 
 Configuration options are set in the `.env` file. The following options are available:
 
-- `GET_PRICE_INTERNAL_FIRST`: A boolean (`True` or `False`) to determine whether to check prices internally before looking at external sources.
-- `DEFAULT_DECIMAL`: The default number of decimal places for tokens.
 - `IGNORED_TOKEN_ADDRESSES`: List the addresses of tokens to be excluded during price fetching.
 - `WEB3_PROVIDER_URI`: The URI of the Web3 provider which is used to interact with the Ethereum blockchain.
 - `REDIS_URL`: The URL of your Redis server.
@@ -109,12 +86,8 @@ Configuration options are set in the `.env` file. The following options are avai
 - `WEB3_PROVIDER_URI`: The URI of the Web3 provider which is used to interact with the Ethereum blockchain.
 - `LOG_VERBOSE`: Set the logging level. Options include `DEBUG`, `INFO`, `WARNING`, `ERROR`, and `CRITICAL`.
 - `LOG_SAVE`: Set to `1` to save the logs to `app.log` file, or `0` to disable logging to file.
-- `DEFAULT_DECIMAL`: Set the default decimal places for tokens.
-- `ROUTER_ADDRESS`, `FACTORY_ADDRESS`, `VOTER_ADDRESS`, `GAUGE_ADDRESS`, `VE_ADDRESS`, `REWARDS_DIST_ADDRESS`, `WRAPPED_BRIBE_FACTORY_ADDRESS`, `TREASURY_ADDRESS`, `DEFAULT_TOKEN_ADDRESS`, `NATIVE_TOKEN_ADDRESS`, `STABLE_TOKEN_ADDRESS`, `ROUTE_TOKEN_ADDRESSES`: These are various contract addresses used in the application. Each address serves a different purpose within the app, and they are essential for the app's functionality.
+- `ROUTER_ADDRESS`, `FACTORY_ADDRESS`, `VOTER_ADDRESS`, `GAUGE_ADDRESS`, `VE_ADDRESS`, `REWARDS_DIST_ADDRESS`, `WRAPPED_BRIBE_FACTORY_ADDRESS`, `TREASURY_ADDRESS`, `DEFAULT_TOKEN_ADDRESS`, `NATIVE_TOKEN_ADDRESS`, `STABLE_TOKEN_ADDRESS`, `ROUTE_TOKEN_ADDRESSES`, `BRIBED_DEFAULT_TOKEN_ADDRESS`: These are various contract addresses used in the application. Each address serves a different purpose within the app, and they are essential for the app's functionality.
 - `EXTERNAL_PRICE_ORDER`: A comma-separated list of functions that dictate the order in which external price data sources are queried.
-- `INTERNAL_PRICE_ORDER`: A comma-separated list of functions that dictate the order in which internal price data sources are queried.
-- `AXELAR_BLUECHIPS_ADDRESSES`: A comma-separated list of Axelar token addresses.
-- `BLUECHIP_TOKEN_ADDRESSES`: A comma-separated list of Bluechip token addresses.
 
 These configurations control how the application fetches price data, which is crucial for accurate financial calculations.
 
@@ -136,10 +109,6 @@ The application periodically syncs data points like tokens, pairs, and VARA pric
 
 The `sync` function orchestrates the synchronization, while `sync_forever` ensures continuous synchronization at intervals set by `SYNC_WAIT_SECONDS`.
 
-
 Ensure to review and set the configurations in the `.env` file as per your requirements before running the application.
-
-
-
 
 ---

@@ -145,9 +145,9 @@ def token_amounts_from_current_price(
     """
 
     sqrt_price = int(sqrt_price)
-    price = (sqrt_price**2) / 2 ** (96 * 2)
-    high_sqrt_x96 = int(sqrt(price * (10000 + deviation) / 10000) * 2**96)
-    low_sqrt_x96 = int(sqrt(price * (10000 - deviation) / 10000) * 2**96)
+    price = (sqrt_price ** 2) / 2 ** (96 * 2)
+    high_sqrt_x96 = int(sqrt(price * (10000 + deviation) / 10000) * 2 ** 96)
+    low_sqrt_x96 = int(sqrt(price * (10000 - deviation) / 10000) * 2 ** 96)
     position_token0_amount = get_amount0_delta(
         high_sqrt_x96, sqrt_price, liquidity, False
     )

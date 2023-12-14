@@ -7,17 +7,22 @@ from logging import StreamHandler
 
 import bjoern
 import falcon
+from falcon_compression.middleware import CompressionMiddleware
+from requestlogger import ApacheFormatter, WSGILogger
+
 from app.assets import Assets
 from app.circulating import CirculatingSupply
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.settings import (CORS_ALLOWED_DOMAINS, LOGGER, PORT,
-                          honeybadger_handler)
+from app.settings import (
+    CORS_ALLOWED_DOMAINS,
+    LOGGER,
+    PORT,
+    honeybadger_handler,
+)
 from app.supply import Supply
 from app.vara import VaraPrice
 from app.venfts import Accounts
-from falcon_compression.middleware import CompressionMiddleware
-from requestlogger import ApacheFormatter, WSGILogger
 
 middleware = [
     CompressionMiddleware(),
@@ -25,9 +30,7 @@ middleware = [
 
 if CORS_ALLOWED_DOMAINS:
     middleware.append(
-        falcon.CORSMiddleware(
-            allow_origins=CORS_ALLOWED_DOMAINS,
-        ),
+        falcon.CORSMiddleware(allow_origins=CORS_ALLOWED_DOMAINS,),
     )
 
 app_config = dict(

@@ -3,12 +3,17 @@
 import json
 
 import falcon
+from web3 import Web3
+
 from app.misc import JSONEncoder
 from app.pairs import Gauge, Pair, Token
 from app.rewards import BribeReward, EmissionReward, FeeReward
-from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER,
-                          reset_multicall_pool_executor)
-from web3 import Web3
+from app.settings import (
+    CACHE,
+    DEFAULT_TOKEN_ADDRESS,
+    LOGGER,
+    reset_multicall_pool_executor,
+)
 
 from .model import VeNFT
 

@@ -6,8 +6,13 @@ from app.assets import Assets
 from app.circulating import CirculatingSupply
 from app.configuration import Configuration
 from app.pairs import Pairs
-from app.settings import (CACHE, CLEAR_INITIAL_CACHE, LOGGER,
-                          SYNC_WAIT_SECONDS, reset_multicall_pool_executor)
+from app.settings import (
+    CACHE,
+    CLEAR_INITIAL_CACHE,
+    LOGGER,
+    SYNC_WAIT_SECONDS,
+    reset_multicall_pool_executor,
+)
 from app.vara import VaraPrice
 
 
@@ -110,7 +115,7 @@ def sync_forever():
             LOGGER.info("Syncing stopped!")
             break
         except Exception as error:
-            LOGGER.error(error)
+            LOGGER.error(f"Sync proccess failed: {error}")
 
         time.sleep(SYNC_WAIT_SECONDS)
 

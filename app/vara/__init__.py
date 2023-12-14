@@ -3,9 +3,14 @@
 from datetime import timedelta
 
 import falcon
+
 from app.assets import Token
-from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER,
-                          VARA_CACHE_EXPIRATION)
+from app.settings import (
+    CACHE,
+    DEFAULT_TOKEN_ADDRESS,
+    LOGGER,
+    VARA_CACHE_EXPIRATION,
+)
 
 
 class VaraPrice(object):

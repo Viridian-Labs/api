@@ -50,6 +50,7 @@ if LOG_SAVE:
 # Tokenlists are split with a pipe char (unlikely to be used in URIs)
 TOKENLISTS = env("TOKENLISTS", default="").split("|")
 DEFAULT_TOKEN_ADDRESS = env("DEFAULT_TOKEN_ADDRESS").lower()
+BRIBED_DEFAULT_TOKEN_ADDRESS = env("BRIBED_DEFAULT_TOKEN_ADDRESS").lower()
 STABLE_TOKEN_ADDRESS = env("STABLE_TOKEN_ADDRESS").lower()
 NATIVE_TOKEN_ADDRESS = env("NATIVE_TOKEN_ADDRESS").lower()
 ROUTE_TOKEN_ADDRESSES = (
@@ -60,24 +61,13 @@ IGNORED_TOKEN_ADDRESSES = (
 )
 
 SPECIAL_TOKENS = env("SPECIAL_TOKENS", default="").lower().split(",")
-BLUECHIP_TOKEN_ADDRESSES = (
-    env("BLUECHIP_TOKEN_ADDRESSES", default="").lower().split(",")
-)
-AXELAR_BLUECHIPS_ADDRESSES = (
-    env("AXELAR_BLUECHIPS_ADDRESSES", default="").lower().split(",")
-)
+
 RETRY_DELAY = env("RETRY_DELAY", default=10)
 
 RETRY_COUNT = env("RETRY_COUNT", default=3)
 
 MULTICHAIN_TOKEN_ADDRESSES = (
     env("MULTICHAIN_TOKEN_ADDRESSES", default="").lower().split(",")
-)
-
-
-INTERNAL_PRICE_ORDER = env(
-    "INTERNAL_PRICE_ORDER",
-    default=["direct", "axelar_bluechips", "bluechip_tokens", "native_token"],
 )
 
 EXTERNAL_PRICE_ORDER = env(
@@ -110,8 +100,6 @@ GET_PRICE_INTERNAL_FIRST = env("GET_PRICE_INTERNAL_FIRST", default=False)
 
 CLEAR_INITIAL_CACHE = env("CLEAR_INITIAL_CACHE", default=False)
 
-
-DEFAULT_DECIMAL = env("DEFAULT_DECIMAL", default=18)
 LOG_VERBOSE = env("LOG_VERBOSE", default="info")
 LOGGER.setLevel(env("LOG_VERBOSE", default="DEBUG"))
 

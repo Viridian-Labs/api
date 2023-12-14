@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from app.settings import CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER
 from multicall import Call
 from walrus import IntegerField, Model, TextField, UUIDField
+
+from app.settings import CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER
 
 
 class Reward(Model):

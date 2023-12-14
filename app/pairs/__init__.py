@@ -4,11 +4,12 @@ import json
 from multiprocessing.pool import ThreadPool
 
 import falcon
+from web3 import Web3
+
 from app.assets import Token
 from app.gauges import Gauge
 from app.misc import JSONEncoder
 from app.settings import CACHE, LOGGER, reset_multicall_pool_executor
-from web3 import Web3
 
 from .model import Pair
 

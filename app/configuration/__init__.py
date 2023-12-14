@@ -5,6 +5,8 @@ import math
 
 import falcon
 import requests
+from versiontools import Version
+
 from app import __version__
 from app.misc import JSONEncoder
 from app.pairs import Pair, Token
@@ -15,7 +17,6 @@ from app.settings import (
     ROUTE_TOKEN_ADDRESSES,
     STABLE_TOKEN_ADDRESS,
 )
-from versiontools import Version
 
 
 class Configuration(object):
@@ -41,7 +42,7 @@ class Configuration(object):
             n = math.ceil(len(pairs_addresses) / (len(pairs_addresses) % 30))
 
             pairs_addresses = [
-                pairs_addresses[i:i + n]
+                pairs_addresses[i: i + n]
                 for i in range(0, len(pairs_addresses), n)
             ]
             if pairs_addresses:
@@ -78,7 +79,7 @@ class Configuration(object):
                 volume_m5=None, volume_h1=None, volume_h6=None, volume_h24=None
             )
         except Exception as e:
-            LOGGER.error(e)
+            LOGGER.error(f"Error fechting volume in DexScreener: {e}")
             return dict(
                 volume_m5=None, volume_h1=None, volume_h6=None, volume_h24=None
             )
@@ -91,15 +92,16 @@ class Configuration(object):
             DEFAULT_TOKEN_ADDRESS,
             STABLE_TOKEN_ADDRESS,
         }
-
         route_tokens = [default_token, stable_token]
         for token_address in route_token_addresses:
             route_tokens.append(Token.find(token_address))
 
         route_token_data = [token._data for token in route_tokens]
-
-        pairs = [p for p in Pair.all()]
-
+        try:
+            pairs = [p for p in Pair.all()]
+        except Exception as e:
+            LOGGER.error(f"Error fetching pairs: {e}")
+            pairs = None
         if pairs:
             tvl = sum(map(lambda p: (p.tvl or 0), pairs))
             max_apr = max(map(lambda p: (p.apr or 0), pairs))
@@ -111,7 +113,6 @@ class Configuration(object):
             volume = json.loads(CACHE.get("volume:json").decode("utf-8"))
         else:
             volume = self.dexscreener_volume_data()
-
         resp.status = falcon.HTTP_200
 
         resp.text = json.dumps(

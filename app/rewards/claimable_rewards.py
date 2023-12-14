@@ -1,5 +1,6 @@
-from app.pairs.aprs import get_apr
 from multicall import Call, Multicall
+
+from app.pairs.aprs import get_apr
 
 
 def get_voter_claimable_rewards(token_id):

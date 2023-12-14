@@ -4,9 +4,15 @@ import json
 from datetime import timedelta
 
 import falcon
-from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER,
-                          TREASURY_ADDRESS, VE_ADDRESS)
 from multicall import Call, Multicall
+
+from app.settings import (
+    CACHE,
+    DEFAULT_TOKEN_ADDRESS,
+    LOGGER,
+    TREASURY_ADDRESS,
+    VE_ADDRESS,
+)
 
 
 class Supply(object):

@@ -1,36 +1,34 @@
 import concurrent.futures
 import json
 import time
+from statistics import mean, stdev
 from typing import Dict, Union
 
 import requests
-from app.misc import ModelUteis
-from app.settings import (
-    AXELAR_BLUECHIPS_ADDRESSES,
-    BLUECHIP_TOKEN_ADDRESSES,
-    CACHE,
-    DEFAULT_TOKEN_ADDRESS,
-    EXTERNAL_PRICE_ORDER,
-    GET_PRICE_INTERNAL_FIRST,
-    IGNORED_TOKEN_ADDRESSES,
-    INTERNAL_PRICE_ORDER,
-    LOGGER,
-    NATIVE_TOKEN_ADDRESS,
-    RETRY_DELAY,
-    ROUTE_TOKEN_ADDRESSES,
-    ROUTER_ADDRESS,
-    STABLE_TOKEN_ADDRESS,
-    TOKENLISTS,
-)
 from multicall import Call, Multicall
 from walrus import BooleanField, FloatField, IntegerField, Model, TextField
 from web3.auto import w3
 from web3.exceptions import ContractLogicError
 
+from app.misc import ModelUteis
+from app.settings import (
+    BRIBED_DEFAULT_TOKEN_ADDRESS,
+    CACHE,
+    DEFAULT_TOKEN_ADDRESS,
+    EXTERNAL_PRICE_ORDER,
+    FACTORY_ADDRESS,
+    IGNORED_TOKEN_ADDRESSES,
+    LOGGER,
+    ROUTE_TOKEN_ADDRESSES,
+    ROUTER_ADDRESS,
+    STABLE_TOKEN_ADDRESS,
+    TOKENLISTS,
+)
+
 DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/tokens/"
 DEFILLAMA_ENDPOINT = "https://coins.llama.fi/prices/current/"
 DEXGURU_ENDPOINT = "https://api.dev.dex.guru/v1/chain/10/tokens/%/market"
-DEBANK_ENDPOINT = "https://api.debank.com/history/token_price?chain=op&"
+DEBANK_ENDPOINT = "https://api.debank.com/history/token_price?chain=kava&"
 
 MAX_RETRIES = 0
 
@@ -68,72 +66,13 @@ class Token(Model):
     created_at = FloatField(default=w3.eth.get_block("latest").timestamp)
     taxed = BooleanField(default=False)
     tax = FloatField(default=0)
+    stable_route = BooleanField(default=False)
     price_control = TextField()
 
     DEXSCREENER_ENDPOINT = DEXSCREENER_ENDPOINT
     DEFILLAMA_ENDPOINT = DEFILLAMA_ENDPOINT
     DEXGURU_ENDPOINT = DEXGURU_ENDPOINT
     DEBANK_ENDPOINT = DEBANK_ENDPOINT
-
-    VALID_TOKEN_ADDRESSES_FOR_SYMBOL = {
-        "BEAR": ["0x818ec0A7Fe18Ff94269904fCED6AE3DaE6d6dC0b".lower()],
-        "multiETH": ["0xc86c7C0eFbd6A49B35E8714C5f59D99De09A225b".lower()],
-        "multiUSDT": ["0xE1da44C0dA55B075aE8E2e4b6986AdC76Ac77d73".lower()],
-        "multiWBTC": ["0xc86c7C0eFbd6A49B35E8714C5f59D99De09A225b".lower()],
-        "multiLQDR": ["0xc86c7C0eFbd6A49B35E8714C5f59D99De09A225b".lower()],
-    }
-
-    ROUTE_CONFIGURATIONS = [
-        {"route_type": "direct", "method": "_get_direct_price"},
-        {
-            "route_type": "axelar_bluechips",
-            "method": "_get_price_through_tokens",
-            "token_addresses": AXELAR_BLUECHIPS_ADDRESSES,
-        },
-        {
-            "route_type": "axelar_bluechips",
-            "method": "_get_price_through_tokens",
-            "token_addresses": AXELAR_BLUECHIPS_ADDRESSES,
-        },
-        {
-            "route_type": "bluechip_tokens",
-            "method": "_get_price_through_tokens",
-            "token_addresses": BLUECHIP_TOKEN_ADDRESSES,
-        },
-        {
-            "route_type": "route_token",
-            "method": "_get_price_through_tokens",
-            "token_addresses": ROUTE_TOKEN_ADDRESSES,
-        },
-        {
-            "route_type": "chain_price_in_pairs",
-            "method": "chain_price_in_pairs",
-        },
-        {
-            "route_type": "chain_price_in_liquid_staked",
-            "method": "chain_price_in_liquid_staked",
-        },
-        {
-            "route_type": "chain_price_in_stables_and_default_token",
-            "method": "chain_price_in_stables_and_default_token",
-        },
-        {
-            "route_type": "_get_price_from_defillama",
-            "method": "_get_price_from_defillama",
-        },
-        {
-            "route_type": "_get_price_from_dexscreener",
-            "method": "_get_price_from_dexscreener",
-        },
-        {
-            "route_type": "chain_price_in_stable_and_tiger",
-            "method": "chain_price_in_stable_and_tiger",
-        },
-        {
-            "route_type": "use_liquid_staked_address",
-            "method": "use_liquid_staked_address",
-        },
-    ]
 
     def get_price_external_source(self):
         """
@@ -178,75 +117,6 @@ class Token(Model):
 
         return 0
 
-    def get_price_internal_source(self):
-        """
-        Fetches the price of the token from internal sources defined in
-        INTERNAL_PRICE_ORDER.
-
-        It iterates over the internal price getters and returns the price
-        from the first successful fetch.
-
-        Returns:
-            float: The fetched price of the token from an internal source,
-            0 if all fetches fail.
-
-        Raises:
-            Exception: Any exception raised by the internal price
-            getter methods.
-        """
-
-        stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
-
-        if not stablecoin:
-            LOGGER.error("No stable coin found")
-            return 0
-        # !EXCPETIONS
-        if self.symbol in ["KTUSDC"]:
-            try:
-                price = self.chain_price_in_stable_and_tiger()
-                if price > 0:
-                    self.price = price
-                    return price
-            except Exception as e:
-                LOGGER.error(f"Error fetching price for {self.symbol}: {e}")
-
-        if self.symbol in ["TORE"]:
-            try:
-                price = self.chain_price_in_stables_and_default_token()
-                if price > 0:
-                    self.price = price
-                    return price
-            except Exception as e:
-                LOGGER.error(f"Error fetching price for {self.symbol}: {e}")
-
-        for route_config in self.ROUTE_CONFIGURATIONS:
-            route_type = route_config["route_type"]
-            if route_type in INTERNAL_PRICE_ORDER:
-                method_name = route_config["method"]
-                method = getattr(self, method_name)
-                try:
-                    if "token_addresses" in route_config:
-                        price = method(
-                            route_config["token_addresses"], stablecoin
-                        )
-                    elif method_name == "_get_direct_price":
-                        price = method(stablecoin)
-                    else:
-                        price = method()
-                    if price > 0:
-                        self.price = price
-                        return price
-
-                    time.sleep(RETRY_DELAY)
-                except Exception as e:
-                    LOGGER.error(
-                        f"Error fetching price using {route_type}: {e}"
-                    )
-
-            else:
-                LOGGER.error(f"Invalid route_type {route_type}")
-        return 0
-
     def _get_direct_price(self, stablecoin):
         """
         Fetches the direct price of the token in terms of the provided
@@ -269,388 +139,215 @@ class Token(Model):
                 ROUTER_ADDRESS,
                 [
                     "getAmountOut(uint256,address,address)(uint256,bool)",
-                    1 * 10**self.decimals,
+                    1 * 10 ** self.decimals,
                     self.address,
                     stablecoin.address,
                 ],
             )()
-            return amount / 10**stablecoin.decimals
+            return amount / 10 ** stablecoin.decimals * stablecoin.price
         except ContractLogicError:
             LOGGER.debug("Found error getting chain price for %s", self.symbol)
             return 0
 
-    def _get_price_through_tokens(self, token_addresses, stablecoin):
-        token_addresses = [address for address in token_addresses if address]
-
-        if not isinstance(token_addresses, list):
-            LOGGER.error("Invalid token_addresses type. Expected list.")
-            return 0
-
-        total_price = 0
-
-        for token_address in token_addresses:
-            if (
-                not token_address
-                or not token_address.startswith("0x")
-                or len(token_address) != 42
-            ):
-                LOGGER.error(f"Invalid Ethereum address: {token_address}")
-                continue
-
-            try:
-                amountB = self._retry_get_amount_out(
-                    token_address, stablecoin.address, stablecoin.decimals
-                )
-
-                if isinstance(amountB, int) and amountB > 0:
-                    total_price += amountB / 10**stablecoin.decimals
-
-            except ContractLogicError as e:
-                LOGGER.error(
-                    f"Price not found for token address: {token_address}: {e}"
-                )
-            except Exception as e:
-                LOGGER.error(
-                    f"Error getting amount out for {token_address}: {e}"
-                )
-
-        return total_price
-
-    def _retry_get_amount_out(
-        self, token_address, target_address, target_decimals
-    ):
-        for i in range(MAX_RETRIES):
-            try:
-                result = Call(
-                    ROUTER_ADDRESS,
-                    [
-                        "getAmountOut(uint256,address,address)(uint256,bool)",
-                        1 * 10**self.decimals,
-                        self.address,
-                        token_address,
-                    ],
-                )()
-
-                if not isinstance(result, tuple):
-                    LOGGER.error(
-                        f"Unexpected result type for {token_address}    "
-                    )
-                    continue
-
-                amount, _ = result
-
-                result = Call(
-                    ROUTER_ADDRESS,
-                    [
-                        "getAmountOut(uint256,address,address)(uint256,bool)",
-                        amount,
-                        token_address,
-                        target_address,
-                    ],
-                )()
-
-                if not isinstance(result, tuple):
-                    LOGGER.error(f"Unexpected result type for {token_address}")
-                    continue
-
-                amount, _ = result
-
-                return amount
-
-            except ContractLogicError:
-                LOGGER.error(
-                    f"Price not found for token address: {token_address}"
-                )
-            except Exception as e:
-                LOGGER.error(
-                    f"Error getting amount out for {token_address}: {e}"
-                )
-
-            if i < MAX_RETRIES - 1:
-                LOGGER.warning(
-                    f"Retrying request after error for {token_address}"
-                )
-                time.sleep(RETRY_DELAY)
-            else:
-                LOGGER.error(f"Unable to fetch data for {token_address}")
-                return 0
-
-    def chain_price_in_bluechips(self):
-        """Returns the price quoted from our router in stables/USDC
-        passing through a bluechip route"""
-        # Peg it forever.
-        if self.address == STABLE_TOKEN_ADDRESS:
-            return 1.0
-        # LOGGER.debug("Chain price Bluechips for %s", self.symbol)
-        stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
-        for b in BLUECHIP_TOKEN_ADDRESSES:
-            try:
-                bluechip = Token.find(b)
-                amountA, is_stable = Call(
-                    ROUTER_ADDRESS,
-                    [
-                        "getAmountOut(uint256,address,address)(uint256,bool)",
-                        1 * 10**self.decimals,
-                        self.address,
-                        bluechip.address,
-                    ],
-                )()
-                amountB, is_stable = Call(
-                    ROUTER_ADDRESS,
-                    [
-                        "getAmountOut(uint256,address,address)(uint256,bool)",
-                        amountA,
-                        bluechip.address,
-                        stablecoin.address,
-                    ],
-                )()
-                if amountB > 0:
-                    return amountB / 10**stablecoin.decimals
-            except ContractLogicError:
-                return 0
-
-        return 0
-
-    def chain_price_in_liquid_staked(self):
-        """Returns the price quoted from our router in stables/USDC
-        passing through a liquid staked route"""
-        # Peg it forever.
-        if self.address == STABLE_TOKEN_ADDRESS:
-            return 1.0
-
-        LOGGER.debug("Chain price Liquid Staked for %s", self.symbol)
-        stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
-
+    def get_pair(self, address):
         try:
-            liquid = Token.find(self.liquid_staked_address)
-
-            if not liquid:
-                return 0
-            amountA, is_stable = Call(
-                ROUTER_ADDRESS,
+            pair = Call(
+                FACTORY_ADDRESS,
                 [
-                    "getAmountOut(uint256,address,address)(uint256,bool)",
-                    1 * 10**self.decimals,
+                    "getPair(address,address,bool)(address)",
                     self.address,
-                    liquid.address,
+                    address,
+                    True,
                 ],
+                [],
             )()
-            amountB, is_stable = Call(
-                ROUTER_ADDRESS,
-                [
-                    "getAmountOut(uint256,address,address)(uint256,bool)",
-                    amountA,
-                    liquid.address,
-                    stablecoin.address,
-                ],
-            )()
+            if pair == "0x0000000000000000000000000000000000000000":
+                raise ContractLogicError
         except ContractLogicError:
-            return 0
+            try:
+                pair = Call(
+                    FACTORY_ADDRESS,
+                    [
+                        "getPair(address,address,bool)(address)",
+                        self.address,
+                        address,
+                        False,
+                    ],
+                    [],
+                )()
+                if pair == "0x0000000000000000000000000000000000000000":
+                    raise ContractLogicError
+            except ContractLogicError:
+                return None
+        return pair
 
-        return amountB / 10**stablecoin.decimals
-
-    def temporary_price_in_bluechips(self):
-        mToken = Token.find(self.liquid_staked_address)
-        if not mToken:
-            return 0
-        return mToken.price
-
-    def chain_price_in_pairs(self):
-        try:
-            pairs_data = requests.get(
-                "https://api.old.equilibrefinance.com/api/v1/pairs"
-            ).json()["data"]
-        except Exception as e:
-            LOGGER.error(f"Failed to fetch pair data: {e}")
-            return None
-
-        relevant_pairs = [
-            p
-            for p in pairs_data
-            if self.address in [p["token0"]["address"], p["token1"]["address"]]
-        ]
-
-        price = self._calculate_price_from_pairs(relevant_pairs)
-
-        LOGGER.info(f"Saving price for token {self.symbol}: {price}")
-        return price
-
-    def _calculate_price_from_pairs(self, pairs):
-        for pair in pairs:
-            token0 = pair["token0"]
-            token1 = pair["token1"]
-
-            if token0["address"] == self.address:
-                other_token = token1
-            elif token1["address"] == self.address:
-                other_token = token0
-            else:
-                continue
-
-            price = self._get_direct_price(Token.find(other_token["address"]))
-            if price > 0:
-                return price
-        return 0
-
-    def chain_price_in_stables_and_default_token(self):
-        """Returns the price quoted from our router in stables/USDC
-        passing through default token route or some special cases"""
-
+    def chain_price_in_route_tokens_reserves(self):
+        """Returns the price quoted from our router in stables/USDC."""
         # Peg it forever.
         if self.address == STABLE_TOKEN_ADDRESS:
             return 1.0
 
-        LOGGER.debug("Chain price NEW for %s", self.symbol)
-
-        stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
-        nativecoin = Token.find(NATIVE_TOKEN_ADDRESS)
-        default_token = Token.find(DEFAULT_TOKEN_ADDRESS)
-
+        # We search for all the pairs that have the token
+        # as one of the pair tokens
+        max_reserve_of_token = max_reserve_of_other_token = 0
+        route_token_selected = "0x0000000"
+        prices = []
         for token_address in ROUTE_TOKEN_ADDRESSES:
-            valid_addresses = self.VALID_TOKEN_ADDRESSES_FOR_SYMBOL.get(
-                self.symbol, []
-            )
-            if (
-                valid_addresses
-                and token_address.lower() not in valid_addresses
-            ):
+            pair = self.get_pair(token_address)
+
+            if pair is None:
                 continue
 
-            try:
-                amountA, is_stable = Call(
-                    ROUTER_ADDRESS,
-                    [
-                        "getAmountOut(uint256,address,address)(uint256,bool)",
-                        1 * 10**self.decimals,
-                        self.address,
-                        token_address,
-                    ],
-                )()
-                # LOGGER.debug("AmountA for %s: %s", token.symbol, amountA)
+            token0 = Call(pair, "token0()(address)", [])()
+            token1 = Call(pair, "token1()(address)", [])()
+            reserve0, reserve1 = Call(
+                pair, ["getReserves()(uint256,uint256)"], []
+            )()
+            LOGGER.debug(f"Reserves for pair {pair}: {reserve0}, {reserve1}")
 
-                amountB, _ = Call(
-                    ROUTER_ADDRESS,
-                    [
-                        "getAmountOut(uint256,address,address)(uint256,bool)",
-                        amountA,
-                        token_address,
-                        stablecoin.address,
-                    ],
-                )()
-                # LOGGER.debug("AmountB for %s: %s", token.symbol, amountB)
-
-                if self.symbol in [
-                    "BIFI",
-                ]:
-                    if amountB is not None and amountB > 0:
-                        return amountB / 10**stablecoin.decimals
-
-                if token_address in [
-                    "0xE3F5a90F9cb311505cd691a46596599aA1A0AD7D".lower(),
-                    "0x818ec0A7Fe18Ff94269904fCED6AE3DaE6d6dC0b".lower(),
-                ]:
-                    amountB, _ = Call(
-                        ROUTER_ADDRESS,
-                        [
-                            "getAmountOut(uint256,address,address)"
-                            + "(uint256,bool)",
-                            amountA,
-                            token_address,
-                            nativecoin.address,
-                        ],
-                    )()
-                    amountC, _ = Call(
-                        ROUTER_ADDRESS,
-                        [
-                            "getAmountOut(uint256,address,address)"
-                            + "(uint256,bool)",
-                            amountB,
-                            nativecoin.address,
-                            stablecoin.address,
-                        ],
-                    )()
-
-                    if amountC is not None and amountC > 0:
-                        return amountC / 10**stablecoin.decimals
-
-                if (
-                    self.symbol in ["ACS", "multiBNB"]
-                    and token_address == default_token.address
-                ):
+            if token0 == self.address:
+                # and reserve0 > max_reserve_of_token:
+                max_reserve_of_token = reserve0 / 10 ** self.decimals
+                other_token = Token.find(token1)
+                if not other_token:
                     continue
+                max_reserve_of_other_token = (
+                    reserve1 / 10 ** other_token.decimals
+                )
+                route_token_selected = token1
+            if token1 == self.address:
+                # and reserve1 > max_reserve_of_token:
+                max_reserve_of_token = reserve1 / 10 ** self.decimals
+                other_token = Token.find(token0)
+                if not other_token:
+                    continue
+                max_reserve_of_other_token = (
+                    reserve0 / 10 ** other_token.decimals
+                )
+                route_token_selected = token0
 
-                if amountB is not None and amountB > 0:
-                    return amountB / 10**stablecoin.decimals
-                # Special case for TVestige and UMBRA (calc from wKAVA)
-                if token_address == nativecoin.address and self.symbol in [
-                    "TV",
-                    "UMBRA",
-                    "TORE",
-                ]:
-                    amountA = amountA / 10**nativecoin.decimals
-                    return amountA * nativecoin.price
+            temp_price = (
+                max_reserve_of_other_token
+                / max_reserve_of_token
+                * other_token.price
+            )
+            LOGGER.debug(
+                f"Price for {self.symbol} and route token {other_token.symbol}:\
+                {temp_price}"
+            )
+            if temp_price > 0:
+                prices.append(
+                    {
+                        "price": float(temp_price),
+                        "reserve": max_reserve_of_token,
+                    }
+                )
 
+        if route_token_selected == "0x0000000":
+            return 0
+        route_token = Token.find(route_token_selected)
+        try:
+            # * We filter the prices that are too far from the
+            # * mean in terms of reserves
+            # ! SPOILER: we don't do this anymore
+            reserves_mean = mean([x["reserve"] for x in prices])
+
+            # reserves_std = (
+            #     stdev([x["reserve"] for x in prices])
+            #     if len(prices) > 2
+            #     else 0.9 * reserves_mean
+            # )
+
+            prices = [x for x in prices if x["reserve"] >= reserves_mean]
+            prices_mean = mean([x["price"] for x in prices])
+            LOGGER.debug(
+                f"Prices for {self.symbol}: {[x['price'] for x in prices]}"
+            )
+            if len(prices) > 2:
+                LOGGER.debug("Prices after filtering: %s", prices)
+                # * We filter the prices that are too far
+                # * from the mean in terms of prices
+                prices_std = (
+                    stdev([x["price"] for x in prices])
+                    if len(prices) > 2
+                    else 0.9 * prices_mean
+                )
+                final_prices = [
+                    x["price"]
+                    for x in prices
+                    if abs(x["price"] - prices_mean) <= prices_std
+                ]
+                # * Getting the closest price to the mean
+                min_diff = min([abs(x - prices_mean) for x in final_prices])
+                final_price = [
+                    x["price"]
+                    for x in prices
+                    if abs(x["price"] - prices_mean) == min_diff
+                ][0]
+            else:
+                # min_diff = min([
+                #   abs(x["price"] - prices_mean) for x in prices])
+                # * Getting the greater price
+                final_price = prices[1 if len(prices) > 1 else 0]["price"]
+            LOGGER.debug(f"PRICE for {self.symbol}: {final_price}")
+            return final_price
+
+        except ContractLogicError:
+            LOGGER.debug(
+                f"Error getting amount out for {self.symbol}\
+                and route token {route_token.symbol}"
+            )
+            return 0
+
+    # ! Legacy function. We don't use this anymore,
+    # ! here for reference
+    def chain_price_in_route_tokens_router(self):
+        # Peg it forever.
+        if self.address == STABLE_TOKEN_ADDRESS:
+            return 1.0
+        for route_token in ROUTE_TOKEN_ADDRESSES:
+            route_token = Token.find(route_token)
+            if not route_token:
+                continue
+            if route_token.address == STABLE_TOKEN_ADDRESS:
+                route_token.price = 1.0
+            try:
+                amount, is_stable = Call(
+                    ROUTER_ADDRESS,
+                    [
+                        "getAmountOut(uint256,address,address)(uint256,bool)",
+                        1 * 10 ** (self.decimals - 4),
+                        self.address,
+                        route_token.address,
+                    ],
+                )()
+                # amount = Call(
+                #     pair_selected,
+                #     [
+                #         'current(address,uint256)(uint256)',
+                #         self.address,
+                #         1 * 10**self.decimals
+                #     ]
+                # )()
+
+                LOGGER.debug(
+                    f"Amount out: {amount},\
+                    route token decimals: {route_token.decimals},\
+                    route token price: {route_token.price}"
+                )
+                if route_token.price > 0 and amount > 0:
+                    return (
+                        amount
+                        * 10 ** 4
+                        / 10 ** route_token.decimals
+                        * route_token.price
+                    )
             except ContractLogicError:
+                LOGGER.debug(
+                    f"Error getting amount out for {self.symbol}\
+                    and route token {route_token.symbol}"
+                )
                 return 0
-
-    def use_liquid_staked_address(self):
-        price = Token.find(self.liquid_staked_address.lower()).price
-        return price
-
-    def chain_price_in_stable_and_tiger(self):
-        LOGGER.debug(f"{self.symbol} especial case through LION")
-
-        stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
-
-        lion = Token.find("0x990e157fC8a492c28F5B50022F000183131b9026")
-
-        for token_address in ROUTE_TOKEN_ADDRESSES:
-            token = Token.find(token_address)
-
-            if self.symbol in ["DEXI", "KTUSDC"] and token.symbol == "USDt":
-                LOGGER.debug("CALC THROUGH for %s", token.symbol)
-
-                try:
-                    amountA, is_stable = Call(
-                        ROUTER_ADDRESS,
-                        [
-                            "getAmountOut(uint256,address,address)"
-                            + "(uint256,bool)",
-                            1 * 10**self.decimals,
-                            self.address,
-                            lion.address,
-                        ],
-                    )()
-                    amountB, is_stable = Call(
-                        ROUTER_ADDRESS,
-                        [
-                            "getAmountOut(uint256,address,address)"
-                            + "(uint256,bool)",
-                            amountA,
-                            lion.address,
-                            token.address,
-                        ],
-                    )()
-                    amountC, is_stable = Call(
-                        ROUTER_ADDRESS,
-                        [
-                            "getAmountOut(uint256,address,address)"
-                            + "(uint256,bool)",
-                            amountB,
-                            token.address,
-                            stablecoin.address,
-                        ],
-                    )()
-
-                    if amountC > 0:
-                        return amountC / 10**stablecoin.decimals
-
-                    if amountB > 0:
-                        return amountB / 10**stablecoin.decimals
-
-                except ContractLogicError:
-                    return 0
-        return 0
 
     @classmethod
     def from_chain(cls, address, logoURI=None):
@@ -672,7 +369,8 @@ class Token(Model):
 
             # TODO: Add a dummy logo...
             token = cls.create(address=address, **data)
-            token._update_price()
+            # token._update_price()
+            token._price_feed()
 
             LOGGER.debug("Fetched %s:%s.", cls.__name__, address)
 
@@ -703,7 +401,6 @@ class Token(Model):
                 and pair["quoteToken"]["address"].lower()
                 != self.address.lower()
             ]
-            # LOGGER.debug(f"Pairs in Kava: {pairs_in_kava}")
 
             if len(pairs_in_kava) == 0:
                 price = str(pairs[0].get("priceUsd") or 0).replace(",", "")
@@ -891,10 +588,13 @@ class Token(Model):
             else False
         )
         token.tax = token_data.get("tax", False)
-        token.price_control = token_data.get("price_control", "")
+        token.price_control = token_data.get("price_control", "").lower()
+        token.stable_route = token_data.get("stable_route", False)
         token.decimals = token_data.get("decimals", 18)
 
-        token._update_price()
+        # token._update_price()
+        token._price_feed()
+
         return token
 
     def to_dict(self):
@@ -912,79 +612,64 @@ class Token(Model):
             "tax": self.tax,
         }
 
-    def _update_price(self):
+    def _price_feed(self):
+        """
+        Returns the price feed of the token.
+        Based on different sources as:
+            - Direct routing to some token
+            - Direct routing to stablecoin
+            - Algo based on the reserves of the token
+                in the liquidity pools
+            - External sources
+        """
         start_time = time.time()
         ModelUteis.ensure_token_validity(self)
+        price = 0
+        try:
+            # ! EXCEPTIONS - These are configured manually from the
+            # ! tokenlist file IGNORED TOKENS, OPTION TOKEN...
+            if self.address in IGNORED_TOKEN_ADDRESSES:
+                LOGGER.error(
+                    "Token %s is in the ignored list. Skipping update.",
+                    self.symbol,
+                )
+                return self._finalize_update(0, start_time)
 
-        if self.address in IGNORED_TOKEN_ADDRESSES:
-            LOGGER.error(
-                "Token %s is in the ignored list. Skipping update.",
-                self.symbol,
-            )
+            if self.address == BRIBED_DEFAULT_TOKEN_ADDRESS:
+                price = Token.find(DEFAULT_TOKEN_ADDRESS).price
+                return self._finalize_update(price, start_time)
+
+            if self.price_control != "":
+                price = self._get_direct_price(Token.find(self.price_control))
+
+            if self.stable_route:
+                price = self._get_direct_price(
+                    Token.find(STABLE_TOKEN_ADDRESS)
+                )
+
+            # * GENERAL CASE - Automatically calculated from the route
+            # * tokens/reserves of liquidity pools
+            if price <= 0:
+                price = self.chain_price_in_route_tokens_reserves()
+            if price <= 0:
+                price = self.get_price_external_source()
+            if price > 0:
+                return self._finalize_update(price, start_time)
             return self._finalize_update(0, start_time)
-
-        if self.price_control:
-            LOGGER.info(
-                "Token %s has price_control. Fetching price using %s",
-                self.symbol,
-                self.price_control,
-            )
-
-            stablecoin = Token.find(STABLE_TOKEN_ADDRESS)
-
-            if not stablecoin:
-                LOGGER.error("No stable coin found")
-                return 0
-
-            for route_config in self.ROUTE_CONFIGURATIONS:
-                route_type = route_config["route_type"]
-
-                if self.price_control == route_type:
-                    method_name = route_config["method"]
-                    method = getattr(self, method_name)
-
-                    try:
-                        if "token_addresses" in route_config:
-                            price_control_price = method(
-                                route_config["token_addresses"], stablecoin
-                            )
-                        else:
-                            price_control_price = method()
-
-                        if price_control_price > 0:
-                            return self._finalize_update(
-                                price_control_price, start_time
-                            )
-
-                    except Exception as e:
-                        LOGGER.error(
-                            f"Error fetching price using {route_type}: {e}"
-                        )
-
-        # Price from blue chip addresses
-        if (
-            self.address
-            in AXELAR_BLUECHIPS_ADDRESSES + BLUECHIP_TOKEN_ADDRESSES
-        ):
-            external_price = self.get_price_external_source()
-            return self._finalize_update(external_price, start_time)
-
-        # Internal source price
-        if GET_PRICE_INTERNAL_FIRST:
-            LOGGER.debug("Getting price internal first for %s", self.symbol)
-            internal_price = self.get_price_internal_source()
-            return self._finalize_update(internal_price, start_time)
-
-        external_price = self.get_price_external_source()
-        if external_price > 0:
-            return self._finalize_update(external_price, start_time)
-
-        return self._finalize_update(0, start_time)
+        except Exception as e:
+            LOGGER.error(f"Error fetching price: {e}")
+            return self._finalize_update(0, start_time)
 
     def _finalize_update(self, price, start_time):
         """Finalizes the update by setting the price and saving the token."""
 
         self.price = price
+        LOGGER.debug(
+            f"Token {self.symbol}:\
+            {self.price_control},\
+            {self.stable_route},\
+            {self.liquid_staked_address}"
+        )
         self.save()
         elapsed_time = time.time() - start_time
         LOGGER.info(

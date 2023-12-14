@@ -1,9 +1,10 @@
 import json
 import time
 
-from app.settings import LOGGER, VOTER_ADDRESS, WEB3_PROVIDER_URI
 from blinker import signal
 from web3 import Web3, exceptions
+
+from app.settings import LOGGER, VOTER_ADDRESS, WEB3_PROVIDER_URI
 
 eventGaugeCreated = signal("GaugeCreated")
 eventGaugeKilled = signal("GaugeKilled")

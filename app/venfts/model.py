@@ -2,12 +2,18 @@
 
 from datetime import datetime
 
-from app.pairs import Gauge, Pair
-from app.rewards import BribeReward, EmissionReward, FeeReward
-from app.settings import (CACHE, LOGGER, REWARDS_DIST_ADDRESS, VE_ADDRESS,
-                          VOTER_ADDRESS)
 from multicall import Call, Multicall
 from walrus import DateTimeField, IntegerField, Model, TextField
+
+from app.pairs import Gauge, Pair
+from app.rewards import BribeReward, EmissionReward, FeeReward
+from app.settings import (
+    CACHE,
+    LOGGER,
+    REWARDS_DIST_ADDRESS,
+    VE_ADDRESS,
+    VOTER_ADDRESS,
+)
 
 
 class NullableDateTimeField(DateTimeField):

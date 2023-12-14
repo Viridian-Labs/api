@@ -1,2 +1,4 @@
 [virtualenvs]
 in-project = true
+[tool.black]
+line-length = 79

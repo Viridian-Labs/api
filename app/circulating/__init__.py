@@ -1,10 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import falcon
-from app.settings import (CACHE, DEFAULT_TOKEN_ADDRESS, LOGGER,
-                          SUPPLY_CACHE_EXPIRATION, TREASURY_ADDRESS,
-                          VE_ADDRESS)
 from multicall import Call, Multicall
+
+from app.settings import (
+    CACHE,
+    DEFAULT_TOKEN_ADDRESS,
+    LOGGER,
+    SUPPLY_CACHE_EXPIRATION,
+    TREASURY_ADDRESS,
+    VE_ADDRESS,
+)
 
 
 class CirculatingSupply:

@@ -5,10 +5,11 @@ import time
 from decimal import Decimal
 
 import requests
+from multicall import Call, Multicall
+
 from app.cl.range_tvl import range_tvl
 from app.cl.subgraph import get_cl_subgraph_pools, get_cl_subgraph_tokens
 from app.settings import CACHE, LOGGER, NATIVE_TOKEN_ADDRESS
-from multicall import Call, Multicall
 
 decimal.getcontext().prec = 50
 
@@ -67,7 +68,7 @@ def _fetch_pools():
             pool["reserve1"] = float(
                 pool["totalValueLockedToken1"]
             ) * 10 ** int(pool["token1"]["decimals"])
-            pool["price"] = (float(pool["sqrtPrice"]) / (2**96)) ** 2
+            pool["price"] = (float(pool["sqrtPrice"]) / (2 ** 96)) ** 2
             pool["projectedFees"] = {"tokens": {}, "apr": 0}
             pools[pool["id"]] = pool
 
@@ -81,8 +82,8 @@ def _fetch_pools():
         token1_price = tokens[pool["token1"]["id"]]["price"]
         token1_decimals = tokens[pool["token1"]["id"]]["decimals"]
         pool["tvl"] = (
-            pool["reserve0"] * token0_price / 10**token0_decimals
-            + pool["reserve1"] * token1_price / 10**token1_decimals
+            pool["reserve0"] * token0_price / 10 ** token0_decimals
+            + pool["reserve1"] * token1_price / 10 ** token1_decimals
         )
 
     # process fee apr, based on last 7 days' fees
