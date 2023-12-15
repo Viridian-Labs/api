@@ -203,7 +203,7 @@ class Gauge(Model):
         return None
 
     @classmethod
-    def rebase_apr(cls):
+    def _calc_rebase_apr(cls):
         """Rebase the APR."""
         minter_address = Call(VOTER_ADDRESS, "minter()(address)")()
         weekly = Call(minter_address, "weekly_emission()(uint256)")()
@@ -229,10 +229,13 @@ class Gauge(Model):
             token = Token.find(DEFAULT_TOKEN_ADDRESS)
             votes = votes / 10 ** token.decimals
 
-            gauge.apr = gauge.rebase_apr = cls.rebase_apr()
+            gauge.apr = cls._calc_rebase_apr()
+            gauge.rebase_apr += gauge.apr
             if token.price and votes * token.price > 0:
                 gauge.votes = votes
                 gauge.apr += ((gauge.tbv * 52) / (votes * token.price)) * 100
+                gauge.bribes_apr += ((gauge.total_bribes * 52) / (votes * token.price)) * 100
+                gauge.fees_apr += ((gauge.total_fees * 52) / (votes * token.price)) * 100
                 gauge.save()
 
         except Exception as e:
