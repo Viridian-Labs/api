@@ -234,8 +234,10 @@ class Gauge(Model):
             if token.price and votes * token.price > 0:
                 gauge.votes = votes
                 gauge.apr += ((gauge.tbv * 52) / (votes * token.price)) * 100
-                gauge.bribes_apr += ((gauge.total_bribes * 52) / (votes * token.price)) * 100
-                gauge.fees_apr += ((gauge.total_fees * 52) / (votes * token.price)) * 100
+                gauge.bribes_apr += \
+                    ((gauge.total_bribes * 52) / (votes * token.price)) * 100
+                gauge.fees_apr += \
+                    ((gauge.total_fees * 52) / (votes * token.price)) * 100
                 gauge.save()
 
         except Exception as e:
@@ -300,7 +302,6 @@ class Gauge(Model):
                     if token.price:
                         gauge.tbv += token_bribes * token.price
                         gauge.total_bribes += token_bribes * token.price
-                        
 
             gauge.save()
         except Exception as e:
@@ -364,10 +365,8 @@ class Gauge(Model):
                 if token.price:
                     gauge.tbv += fee / 10**token.decimals * token.price
                     gauge.total_fees += token_fees * token.price
-                    
 
             gauge.save()
-
         except Exception as e:
             LOGGER.error(
                 f"Error fetching internal rewards for {gauge.address}: {e}"
