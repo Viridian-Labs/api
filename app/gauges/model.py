@@ -234,10 +234,12 @@ class Gauge(Model):
             if token.price and votes * token.price > 0:
                 gauge.votes = votes
                 gauge.apr += ((gauge.tbv * 52) / (votes * token.price)) * 100
-                gauge.bribes_apr += \
-                    ((gauge.total_bribes * 52) / (votes * token.price)) * 100
-                gauge.fees_apr += \
-                    ((gauge.total_fees * 52) / (votes * token.price)) * 100
+                gauge.bribes_apr += (
+                    (gauge.total_bribes * 52) / (votes * token.price)
+                ) * 100
+                gauge.fees_apr += (
+                    (gauge.total_fees * 52) / (votes * token.price)
+                ) * 100
                 gauge.save()
 
         except Exception as e:
@@ -271,8 +273,10 @@ class Gauge(Model):
             rewards_data = Multicall(reward_calls)()
 
             for bribe_token_address, amount in rewards_data.items():
-                if amount == 0:
-                    continue
+                # !We need all data in the UI in order
+                # !to show the correct Rewards.
+                # if amount == 0:
+                #     continue
                 bribe_token_address_str = (
                     bribe_token_address.decode("utf-8")
                     if isinstance(bribe_token_address, bytes)
@@ -345,7 +349,7 @@ class Gauge(Model):
                 )
 
                 token = Token.find(token_address_str)
-                token_fees = fee / 10**token.decimals
+                token_fees = fee / 10 ** token.decimals
 
                 if gauge.rewards.get(token_address):
                     gauge.rewards[token_address] = (
@@ -363,7 +367,7 @@ class Gauge(Model):
                     )
 
                 if token.price:
-                    gauge.tbv += fee / 10**token.decimals * token.price
+                    gauge.tbv += fee / 10 ** token.decimals * token.price
                     gauge.total_fees += token_fees * token.price
 
             gauge.save()
