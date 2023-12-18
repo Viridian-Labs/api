@@ -19,7 +19,9 @@ class Assets(object):
     def sync(cls):
         Tokens = Token.from_tokenlists()
 
-        serializable_tokens = [tok._data for tok in Tokens]
+        serializable_tokens = [
+            tok._data for tok in Tokens if tok._data["logoURI"] is not None
+        ]
 
         CACHE.set(
             "assets:json",
@@ -29,7 +31,6 @@ class Assets(object):
 
     @staticmethod
     def serialize():
-
         """
         Serializes the list of Assets objects
         into a list of dictionaries.
@@ -39,7 +40,9 @@ class Assets(object):
 
         for pair in Token.all():
             data = pair._data
-            pairs.append(data)
+            # * Exclude non-whitelisted tokens
+            if data["logoURI"] is not None:
+                pairs.append(data)
 
         return pairs
 
@@ -52,7 +55,6 @@ class Assets(object):
 
     @classmethod
     def recache(cls):
-
         """
         Updates the cache with the serialized pairs data.
         """
