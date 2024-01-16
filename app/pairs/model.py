@@ -67,7 +67,6 @@ class Pair(Model):
         return None
 
     def _update_apr(self, gauge):
-
         if self.tvl == 0:
             return
 
@@ -82,7 +81,6 @@ class Pair(Model):
 
     @classmethod
     def find(cls, address):
-
         if address is None:
             return None
 
@@ -93,9 +91,9 @@ class Pair(Model):
 
     @classmethod
     def chain_addresses(cls):
-
+        LOGGER.debug("Fetching all pair addresses from the blockchain...")
         pairs_count = Call(FACTORY_ADDRESS, "allPairsLength()(uint256)")()
-
+        LOGGER.debug(f"Found {pairs_count} pairs.")
         pairs_multi = Multicall(
             [
                 Call(
@@ -106,12 +104,10 @@ class Pair(Model):
                 for idx in range(0, pairs_count)
             ]
         )
-
         return list(pairs_multi().values())
 
     @classmethod
     def from_chain(cls, address):
-
         try:
             address = address.lower()
 

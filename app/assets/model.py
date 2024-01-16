@@ -139,12 +139,12 @@ class Token(Model):
                 ROUTER_ADDRESS,
                 [
                     "getAmountOut(uint256,address,address)(uint256,bool)",
-                    1 * 10 ** self.decimals,
+                    1 * 10**self.decimals,
                     self.address,
                     stablecoin.address,
                 ],
             )()
-            return amount / 10 ** stablecoin.decimals * stablecoin.price
+            return amount / 10**stablecoin.decimals * stablecoin.price
         except ContractLogicError:
             LOGGER.debug("Found error getting chain price for %s", self.symbol)
             return 0
@@ -207,22 +207,22 @@ class Token(Model):
 
             if token0 == self.address:
                 # and reserve0 > max_reserve_of_token:
-                max_reserve_of_token = reserve0 / 10 ** self.decimals
+                max_reserve_of_token = reserve0 / 10**self.decimals
                 other_token = Token.find(token1)
                 if not other_token:
                     continue
                 max_reserve_of_other_token = (
-                    reserve1 / 10 ** other_token.decimals
+                    reserve1 / 10**other_token.decimals
                 )
                 route_token_selected = token1
             if token1 == self.address:
                 # and reserve1 > max_reserve_of_token:
-                max_reserve_of_token = reserve1 / 10 ** self.decimals
+                max_reserve_of_token = reserve1 / 10**self.decimals
                 other_token = Token.find(token0)
                 if not other_token:
                     continue
                 max_reserve_of_other_token = (
-                    reserve0 / 10 ** other_token.decimals
+                    reserve0 / 10**other_token.decimals
                 )
                 route_token_selected = token0
 
@@ -338,8 +338,8 @@ class Token(Model):
                 if route_token.price > 0 and amount > 0:
                     return (
                         amount
-                        * 10 ** 4
-                        / 10 ** route_token.decimals
+                        * 10**4
+                        / 10**route_token.decimals
                         * route_token.price
                     )
             except ContractLogicError:
