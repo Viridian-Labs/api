@@ -8,7 +8,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc g++ libssl-dev libev-dev curl && \
     apt-get clean
 
-RUN pip install poetry
+RUN curl -sSL https://install.python-poetry.org | python -
 
 ENV PATH="$PATH:$POETRY_HOME/bin"
 
