@@ -28,7 +28,7 @@ from app.settings import (
 DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/tokens/"
 DEFILLAMA_ENDPOINT = "https://coins.llama.fi/prices/current/"
 # DEXGURU_ENDPOINT = "https://api.dev.dex.guru/v1/chain/10/tokens/%/market"
-# DEBANK_ENDPOINT = "https://api.debank.com/history/token_price?chain=kava&"
+# DEBANK_ENDPOINT = "https://api.debank.com/history/token_price?chain=core&"
 
 MAX_RETRIES = 0
 
@@ -393,19 +393,19 @@ class Token(Model):
                 # 'pairs' key missing, None, or not a non-empty list.")
                 # LOGGER.debug(f"Dexscreener API Response: {data}")
                 return 0
-            pairs_in_kava = [
+            pairs_in_core = [
                 pair
                 for pair in pairs
-                if pair["chainId"] == "kava"
-                and pair["dexId"] == "equilibre"
+                if pair["chainId"] == "core"
+                and pair["dexId"] == "viridian"
                 and pair["quoteToken"]["address"].lower()
                 != self.address.lower()
             ]
 
-            if len(pairs_in_kava) == 0:
+            if len(pairs_in_core) == 0:
                 price = str(pairs[0].get("priceUsd") or 0).replace(",", "")
             else:
-                price = str(pairs_in_kava[0].get("priceUsd") or 0).replace(
+                price = str(pairs_in_core[0].get("priceUsd") or 0).replace(
                     ",", ""
                 )
 
@@ -415,7 +415,7 @@ class Token(Model):
             return 0
 
     def _get_price_from_defillama(self) -> float:
-        url = self.DEFILLAMA_ENDPOINT + "kava:" + self.address.lower()
+        url = self.DEFILLAMA_ENDPOINT + "core:" + self.address.lower()
 
         try:
             res = requests.get(url)

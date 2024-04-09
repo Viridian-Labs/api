@@ -17,7 +17,7 @@ def are_tvls_close(tvl1, tvl2, percent_tolerance=0.1):
 
 
 def dexscreener_request(address):
-    json_url = f"https://api.dexscreener.com/latest/dex/pairs/kava/{address}"
+    json_url = f"https://api.dexscreener.com/latest/dex/pairs/core/{address}"
     pairs = requests.get(json_url).json()["pairs"]
     if pairs is None or not isinstance(pairs, list) or len(pairs) == 0:
         return 0

@@ -24,24 +24,24 @@ def get_data_price_from_dexscreener(address):
     pairs = requests.get(json3_url + address).json()["pairs"]
     if pairs is None or not isinstance(pairs, list) or len(pairs) == 0:
         return 0
-    pairs_in_kava = [
+    pairs_in_core = [
         pair
         for pair in pairs
-        if pair["chainId"] == "kava"
-        and pair["dexId"] == "equilibre"
+        if pair["chainId"] == "core"
+        and pair["dexId"] == "viridian"
         and pair["quoteToken"]["address"].lower() != address.lower()
     ]
-    # LOGGER.debug(f"Pairs in Kava: {pairs_in_kava}")
+    # LOGGER.debug(f"Pairs in Core: {pairs_in_core}")
 
-    if len(pairs_in_kava) == 0:
+    if len(pairs_in_core) == 0:
         # price = str(pairs[0].get("priceUsd") or 0).replace(",", "")
         prices = [float(x.get("priceUsd") or 0) for x in pairs]
 
     else:
-        # prices = str(pairs_in_kava[0].get("priceUsd") or 0).replace(
+        # prices = str(pairs_in_core[0].get("priceUsd") or 0).replace(
         #     ",", ""
         # )
-        prices = [float(x.get("priceUsd") or 0) for x in pairs_in_kava]
+        prices = [float(x.get("priceUsd") or 0) for x in pairs_in_core]
     print(f"TOKEN: {address}")
     print(f"Prices in Dexscreener: {prices}")
     prices_mean = mean([x for x in prices])
