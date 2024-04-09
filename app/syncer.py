@@ -13,7 +13,7 @@ from app.settings import (
     SYNC_WAIT_SECONDS,
     reset_multicall_pool_executor,
 )
-from app.vara import VaraPrice
+from app.viri import ViriPrice
 
 
 class Syncer:
@@ -56,8 +56,8 @@ class Syncer:
         Syncer.sync_with_cache("supply:json", "supply", CirculatingSupply.sync)
 
     @staticmethod
-    def sync_vara():
-        Syncer.sync_with_cache("vara:json", "VARA price", VaraPrice.sync)
+    def sync_viri():
+        Syncer.sync_with_cache("viri:json", "VIRI price", ViriPrice.sync)
 
     @staticmethod
     def sync():
@@ -79,7 +79,7 @@ class Syncer:
         Syncer.sync_supply()
         t6 = time.time()
 
-        Syncer.sync_vara()
+        Syncer.sync_viri()
         t7 = time.time()
 
         LOGGER.info("Syncing tokens data done in %s seconds.", t1 - t0)
@@ -87,7 +87,7 @@ class Syncer:
         LOGGER.info("Syncing circulating data done in %s seconds.", t4 - t2)
         LOGGER.info("Syncing configuration data done in %s seconds.", t5 - t4)
         LOGGER.info("Syncing supply data done in %s seconds.", t6 - t5)
-        LOGGER.info("Syncing vara data done in %s seconds.", t7 - t6)
+        LOGGER.info("Syncing viri data done in %s seconds.", t7 - t6)
         LOGGER.info("Total syncing time: %s seconds.", t7 - t0)
 
         reset_multicall_pool_executor()

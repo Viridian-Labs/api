@@ -110,8 +110,8 @@ TOKEN_CACHE_EXPIRATION = env.int(
 PAIR_CACHE_EXPIRATION = env.int(
     "PAIR_CACHE_EXPIRATION", default=3600
 )  # Default to 1 hour
-VARA_CACHE_EXPIRATION = env.int(
-    "VARA_CACHE_EXPIRATION", default=3600
+VIRI_CACHE_EXPIRATION = env.int(
+    "VIRI_CACHE_EXPIRATION", default=3600
 )  # Default to 1 hour
 SUPPLY_CACHE_EXPIRATION = env.int(
     "SUPPLY_CACHE_EXPIRATION", default=3600

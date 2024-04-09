@@ -1,6 +1,6 @@
 # Not using enum because it's not json serializable
 Token_Type = {
-    "VARA": -10,
+    "VIRI": -10,
     "LSD": -1,
     "NEAD": -2,
     "OTHERS": 0,
@@ -32,4 +32,4 @@ token_type_dict = {
 }
 
 weth_address = "0x1a35EE4640b0A3B87705B0A4B45D227Ba60Ca2ad".lower()
-vara_address = "0xE1da44C0dA55B075aE8E2e4b6986AdC76Ac77d73".lower()
+viri_address = "0xE1da44C0dA55B075aE8E2e4b6986AdC76Ac77d73".lower() ##FIXME: 

@@ -21,7 +21,7 @@ from app.settings import (
     honeybadger_handler,
 )
 from app.supply import Supply
-from app.vara import VaraPrice
+from app.viri import ViriPrice
 from app.venfts import Accounts
 
 middleware = [
@@ -46,7 +46,7 @@ app.add_route("/api/v1/configuration", Configuration())
 app.add_route("/api/v1/pairs", Pairs())
 app.add_route("/api/v1/supply", Supply())
 app.add_route("/api/v1/circulating-supply", CirculatingSupply())
-app.add_route("/api/v1/vara-price", VaraPrice())
+app.add_route("/api/v1/viri-price", ViriPrice())
 
 wsgi = WSGILogger(app, [StreamHandler(sys.stdout)], ApacheFormatter())
 

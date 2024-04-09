@@ -1,8 +1,8 @@
-# Equilibre Finance HTTP API 
+# Viridian Finance HTTP API 
 
-[![Latest tag](https://github.com/equilibre-finance/api/actions/workflows/tag-ci.yml/badge.svg)](https://github.com/equilibre-finance/api/actions/workflows/tag-ci.yml)
+[![Latest tag](https://github.com/Viridian-Labs/api/blob/main/.github/workflows/tag-ci.yml)]
 
-The Equilibre Finance HTTP API facilitates the fetching of tokens, liquidity pool pairs, and other associated data for our application.
+The Viridian Finance HTTP API facilitates the fetching of tokens, liquidity pool pairs, and other associated data for our application.
 
 Ensure you have [Docker](https://docs.docker.com/install/) installed before proceeding.
 
@@ -81,7 +81,7 @@ Configuration options are set in the `.env` file. The following options are avai
 - `REDIS_URL`: The URL of your Redis server.
 - `TOKEN_CACHE_EXPIRATION`: The expiration time (in seconds) for the token cache.
 - `PAIR_CACHE_EXPIRATION`: The expiration time (in seconds) for the pair cache.
-- `VARA_CACHE_EXPIRATION`: The expiration time (in seconds) for the VARA cache.
+- `VIRI_CACHE_EXPIRATION`: The expiration time (in seconds) for the VIRI cache.
 - `SUPPLY_CACHE_EXPIRATION`: The expiration time (in seconds) for the supply cache.
 - `WEB3_PROVIDER_URI`: The URI of the Web3 provider which is used to interact with the Ethereum blockchain.
 - `LOG_VERBOSE`: Set the logging level. Options include `DEBUG`, `INFO`, `WARNING`, `ERROR`, and `CRITICAL`.
@@ -99,11 +99,11 @@ Our application employs a caching mechanism to optimize performance by reducing 
 
 #### **Synchronization Mechanism**
 
-The application periodically syncs data points like tokens, pairs, and VARA prices. During synchronization:
+The application periodically syncs data points like tokens, pairs, and VIRI prices. During synchronization:
 
 1. **Tokens**: Checks cache validity (`assets:json`). If expired, fetches and updates the token list.
 2. **Pairs**: Checks cache validity (`pairs:json`). If expired, fetches and updates the pairs data using potential multi-threading.
-3. **VARA Price**: Checks cache validity (`vara:json`). If expired, fetches and updates the VARA price.
+3. **VIRI Price**: Checks cache validity (`viri:json`). If expired, fetches and updates the VIRI price.
 4. **Circulating Supply**: Verifies cache validity (circulating:string). If the cache is outdated, it fetches and updates the circulating supply.
 5. **Configuration**: Verifies cache validity (volume:json). If the cache is outdated, it fetches and updates the configuration, ensuring the dexscreener data isn't calculated in every call.
 

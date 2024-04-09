@@ -15,6 +15,6 @@
 6. **Environment Configurations**:
     - The `.env` files have likely seen modifications or enhancements to accommodate the new features and changes in v2. These files typically hold crucial configurations that dictate the behavior and environment-specific settings of the application.
 7. **Modular Approach**:
-    - The clear division into modules (`vara`, `assets`, `pairs`) in v2 suggests a more modular design, making the application more organized and easier to manage.
+    - The clear division into modules (`viri`, `assets`, `pairs`) in v2 suggests a more modular design, making the application more organized and easier to manage.
 8. **Code Structure and Classes**:
     - The introduction of new classes and modifications to existing ones would indicate a shift in the application's logic, structure, and potentially its core functionalities. By redefining classes and their methods, v2 is likely providing more refined, efficient, or extended functionalities compared to v1.

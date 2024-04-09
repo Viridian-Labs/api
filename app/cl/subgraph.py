@@ -38,7 +38,7 @@ def process_tokens(tokens):
             elif token["id"] == weth_address:
                 token_type = Token_Type["WETH"]
             elif token["id"] == DEFAULT_TOKEN_ADDRESS:
-                token_type = Token_Type["VARA"]
+                token_type = Token_Type["VIRI"]
         token["type"] = token_type
     return tokens
 
@@ -208,7 +208,7 @@ def build_pool_query(skip, limit):
                     id
                     rewardTokens
                     isAlive
-                    bVaraRatio
+                    bViriRatio
                 }}
                 feeDistributor {{
                     id

@@ -123,14 +123,14 @@ def _fetch_pools():
                 * int(pool["feeTier"])
                 / 1e6
                 * 10 ** token0["decimals"]
-                * fee_distribution["veVara"]
+                * fee_distribution["veViri"]
             )
             pool["projectedFees"]["tokens"][pool["token1"]["id"]] += int(
                 float(day["volumeToken1"])
                 * int(pool["feeTier"])
                 / 1e6
                 * 10 ** token1["decimals"]
-                * fee_distribution["veVara"]
+                * fee_distribution["veViri"]
             )
             usd_in_range += float(day_usd_in_range)
 
@@ -139,7 +139,7 @@ def _fetch_pools():
         )
 
         # apr is in %s, 20% goes to users,
-        # 80% goes to veVara and treasury
+        # 80% goes to veViri and treasury
         try:
             # this already accounts for the 20% to LP
             pool["feeApr"] = (
