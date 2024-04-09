@@ -10,7 +10,9 @@ RUN apt-get update && \
 
 RUN pip install poetry
 
-ENV PATH="$PATH:$POETRY_HOME/bin"
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
 # Prod stage
 FROM base AS prod
