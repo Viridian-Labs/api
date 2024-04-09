@@ -30,7 +30,7 @@ class Configuration(object):
     def dexscreener_volume_data():
         try:
             DEXSCREENER_ENDPOINT = (
-                "https://api.dexscreener.com/latest/dex/pairs/kava/"
+                "https://api.dexscreener.com/latest/dex/pairs/core/"
             )
             CACHE_KEY = "volume:json"
 
