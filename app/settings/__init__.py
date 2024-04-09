@@ -74,9 +74,9 @@ EXTERNAL_PRICE_ORDER = env(
     "EXTERNAL_PRICE_ORDER",
     default=[
         "_get_price_from_dexscreener",
-        "_get_price_from_debank",
+        # "_get_price_from_debank",
         "_get_price_from_defillama",
-        "_get_price_from_dexguru",
+        # "_get_price_from_dexguru",
     ],
 )
 

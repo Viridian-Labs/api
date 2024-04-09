@@ -27,8 +27,8 @@ from app.settings import (
 
 DEXSCREENER_ENDPOINT = "https://api.dexscreener.com/latest/dex/tokens/"
 DEFILLAMA_ENDPOINT = "https://coins.llama.fi/prices/current/"
-DEXGURU_ENDPOINT = "https://api.dev.dex.guru/v1/chain/10/tokens/%/market"
-DEBANK_ENDPOINT = "https://api.debank.com/history/token_price?chain=kava&"
+# DEXGURU_ENDPOINT = "https://api.dev.dex.guru/v1/chain/10/tokens/%/market"
+# DEBANK_ENDPOINT = "https://api.debank.com/history/token_price?chain=kava&"
 
 MAX_RETRIES = 0
 
@@ -71,8 +71,8 @@ class Token(Model):
 
     DEXSCREENER_ENDPOINT = DEXSCREENER_ENDPOINT
     DEFILLAMA_ENDPOINT = DEFILLAMA_ENDPOINT
-    DEXGURU_ENDPOINT = DEXGURU_ENDPOINT
-    DEBANK_ENDPOINT = DEBANK_ENDPOINT
+    # DEXGURU_ENDPOINT = DEXGURU_ENDPOINT
+    # DEBANK_ENDPOINT = DEBANK_ENDPOINT
 
     def get_price_external_source(self):
         """
@@ -95,9 +95,9 @@ class Token(Model):
 
         price_getters_mapping = {
             "_get_price_from_dexscreener": self._get_price_from_dexscreener,
-            "_get_price_from_debank": self._get_price_from_debank,
+            # "_get_price_from_debank": self._get_price_from_debank,
             "_get_price_from_defillama": self._get_price_from_defillama,
-            "_get_price_from_dexguru": self._get_price_from_dexguru,
+            # "_get_price_from_dexguru": self._get_price_from_dexguru,
         }
 
         for func_name in EXTERNAL_PRICE_ORDER:
@@ -448,28 +448,28 @@ class Token(Model):
             )
             return 0
 
-    def _get_price_from_debank(self):
-        try:
-            res = requests.get(
-                self.DEBANK_ENDPOINT + "token_id=" + self.address.lower()
-            )
+    # def _get_price_from_debank(self):
+    #     try:
+    #         res = requests.get(
+    #             self.DEBANK_ENDPOINT + "token_id=" + self.address.lower()
+    #         )
 
-            res.raise_for_status()
-            token_data = res.json().get("data") or {}
+    #         res.raise_for_status()
+    #         token_data = res.json().get("data") or {}
 
-            return token_data.get("price") or 0
-        except (requests.RequestException, ValueError) as e:
-            LOGGER.error("Error fetching price from DeBank: %s", e)
-            return 0
+    #         return token_data.get("price") or 0
+    #     except (requests.RequestException, ValueError) as e:
+    #         LOGGER.error("Error fetching price from DeBank: %s", e)
+    #         return 0
 
-    def _get_price_from_dexguru(self):
-        try:
-            res = requests.get(self.DEXGURU_ENDPOINT % self.address.lower())
-            res.raise_for_status()
-            return res.json().get("price_usd", 0)
-        except (requests.RequestException, ValueError) as e:
-            LOGGER.error("Error fetching price from DexGuru: %s", e)
-            return 0
+    # def _get_price_from_dexguru(self):
+    #     try:
+    #         res = requests.get(self.DEXGURU_ENDPOINT % self.address.lower())
+    #         res.raise_for_status()
+    #         return res.json().get("price_usd", 0)
+    #     except (requests.RequestException, ValueError) as e:
+    #         LOGGER.error("Error fetching price from DexGuru: %s", e)
+    #         return 0
 
     @classmethod
     def find(cls, address):
