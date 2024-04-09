@@ -172,19 +172,6 @@ class Pair(Model):
             data["isStable"] = data["stable"]
             data["totalSupply"] = data["total_supply"]
 
-            symbol_patches = {
-                "0x1e221ea8d1440c3549942821412c03f101f5e99a":
-                    "vAMM-TOREv1/WKAVA",
-                "0xce3433baf2356e8404ca7dcc39eb61feda73e2c8":
-                    "vAMM-TOREv1/VARA",
-                "0x1ae83a1b9ee963213d1e3ff337f92930582d304f":
-                    "vAMM-TOREv2/WKAVA",
-            }
-            for address_map, symbol in symbol_patches.items():
-                if address_map in data["address"]:
-                    data["symbol"] = symbol
-                    LOGGER.debug(f"Symbol changed: {data['symbol']}")
-
             if data["token0_address"] in MULTICHAIN_TOKEN_ADDRESSES:
                 aux_symbol = data["symbol"]
                 data["symbol"] = aux_symbol[:5] + "multi" + aux_symbol[5:]
