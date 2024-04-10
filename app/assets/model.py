@@ -7,7 +7,9 @@ from typing import Dict, Union
 import requests
 from multicall import Call, Multicall
 from walrus import BooleanField, FloatField, IntegerField, Model, TextField
-from web3.auto import w3
+from web3 import Web3, HTTPProvider
+from web3.middleware import geth_poa_middleware
+# from web3.auto import w3
 from web3.exceptions import ContractLogicError
 
 from app.misc import ModelUteis
@@ -63,6 +65,8 @@ class Token(Model):
     price = FloatField(default=0)
     stable = BooleanField(default=False)
     liquid_staked_address = TextField()
+    w3 = Web3(HTTPProvider('https://rpc.test.btcs.network'))
+    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
     created_at = FloatField(default=w3.eth.get_block("latest").timestamp)
     taxed = BooleanField(default=False)
     tax = FloatField(default=0)
@@ -500,6 +504,8 @@ class Token(Model):
 
     @classmethod
     def from_tokenlists(cls):
+        w3 = Web3(HTTPProvider('https://rpc.test.btcs.network'))
+        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
         our_chain_id = w3.eth.chain_id
         all_tokens = cls._fetch_all_tokens(our_chain_id)
 

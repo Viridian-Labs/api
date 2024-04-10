@@ -38,13 +38,13 @@ In order to enter manual configurations to the price fetching, we have added a `
 Example:
 ```json
 {
-  "chainId": 2222,
+  "chainId": 1116,
   "name": "SHRAP",
   "symbol": "xSHRAP",
   "price_control": "0x123....3123",
 },
 {
-  "chainId": 2222,
+  "chainId": 1116,
   "name": "WCORE",
   "symbol": "WCORE",
   "stable_route": "true",
