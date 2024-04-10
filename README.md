@@ -9,7 +9,7 @@ Ensure you have [Docker](https://docs.docker.com/install/) installed before proc
 1. Copy the `env.example` file and rename it to `.env`, then update the relevant variables.
 2. If this is your first time running the project, build the Docker image using the command:
     ```bash
-     sudo docker build -t api:0.1 && docker compose build
+     sudo docker build -t ve-api . && docker compose build
     ```
 3. To start the services, run:
     ```bash
@@ -45,8 +45,8 @@ Example:
 },
 {
   "chainId": 2222,
-  "name": "WKAVA",
-  "symbol": "WKAVA",
+  "name": "WCORE",
+  "symbol": "WCORE",
   "stable_route": "true",
 },
 ```
@@ -104,8 +104,8 @@ The application periodically syncs data points like tokens, pairs, and VIRI pric
 1. **Tokens**: Checks cache validity (`assets:json`). If expired, fetches and updates the token list.
 2. **Pairs**: Checks cache validity (`pairs:json`). If expired, fetches and updates the pairs data using potential multi-threading.
 3. **VIRI Price**: Checks cache validity (`viri:json`). If expired, fetches and updates the VIRI price.
-4. **Circulating Supply**: Verifies cache validity (circulating:string). If the cache is outdated, it fetches and updates the circulating supply.
-5. **Configuration**: Verifies cache validity (volume:json). If the cache is outdated, it fetches and updates the configuration, ensuring the dexscreener data isn't calculated in every call.
+4. **Circulating Supply**: Verifies cache validity (`circulating:string`). If the cache is outdated, it fetches and updates the circulating supply.
+5. **Configuration**: Verifies cache validity (`volume:json`). If the cache is outdated, it fetches and updates the configuration, ensuring the dexscreener data isn't calculated in every call.
 
 The `sync` function orchestrates the synchronization, while `sync_forever` ensures continuous synchronization at intervals set by `SYNC_WAIT_SECONDS`.
 

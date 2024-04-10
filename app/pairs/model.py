@@ -202,17 +202,10 @@ class Pair(Model):
 
     @classmethod
     def _tvl(cls, pool_data, token0, token1):
-        excluded_pools_map = {
-            "vAMM-TW1/TW2": "0xe6c4b59c291562fa7d9ff5b39c38e2a28294ec49",
-        }
+
+        tvl = 0
 
         try:
-            if pool_data["symbol"] in excluded_pools_map:
-                LOGGER.debug(f"Excluded pool {pool_data['symbol']}")
-                return 0
-
-            tvl = 0
-
             if token0 is not None and token0.price and token0.price != 0:
                 tvl += pool_data["reserve0"] * token0.price
 
