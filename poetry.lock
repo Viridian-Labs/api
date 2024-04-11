@@ -1097,9 +1097,9 @@ web3 = "^5.27,!=5.29.*,!=5.30.*,!=5.31.*"
 
 [package.source]
 type = "git"
-url = "https://github.com/equilibre-finance/multicall.py"
+url = "https://github.com/Viridian-Labs/multicall.py"
 reference = "HEAD"
-resolved_reference = "ea33c0382dc894e6633407c45e38248daae89e4c"
+resolved_reference = "c3eb27ca983f159a6417f4de205998d4f483fe18"
 
 [[package]]
 name = "multidict"
@@ -1885,4 +1885,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9,<3.11"
-content-hash = "91df87a8af2c1e17116b46f120baf866dec2faf5127fb59d30b444acfcc5b05e"
+content-hash = "bd70818a1588f082b4a22263bd88dcee426459f7e4142c0fa485d4d8ccf37fca"
