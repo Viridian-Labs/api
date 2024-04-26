@@ -23,7 +23,7 @@ if os.path.exists(".env"):
 
 
 # Webserver setup
-PORT = env.int("PORT", default=8000)
+PORT = env.int("PORT", default=8443)
 
 # Logger setup
 LOGGER = logging.getLogger(__name__)

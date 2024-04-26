@@ -139,6 +139,11 @@ class Token(Model):
         """
 
         try:
+            LOGGER.debug("Token: %s", self.symbol)
+            LOGGER.debug("Decimales: %s", self.decimals)
+            LOGGER.debug("Address: %s", self.address)
+            LOGGER.debug("Stablecoin Address: %s", self.address)
+
             amount, is_stable = Call(
                 ROUTER_ADDRESS,
                 [
@@ -148,6 +153,9 @@ class Token(Model):
                     stablecoin.address,
                 ],
             )()
+
+            LOGGER.debug("Amount result: %s", amount)
+
             return amount / 10**stablecoin.decimals * stablecoin.price
         except ContractLogicError:
             LOGGER.debug("Found error getting chain price for %s", self.symbol)
@@ -641,9 +649,9 @@ class Token(Model):
                 )
                 return self._finalize_update(0, start_time)
 
-            if self.address == BRIBED_DEFAULT_TOKEN_ADDRESS:
-                price = Token.find(DEFAULT_TOKEN_ADDRESS).price
-                return self._finalize_update(price, start_time)
+            # if self.address == BRIBED_DEFAULT_TOKEN_ADDRESS:
+            #     price = Token.find(DEFAULT_TOKEN_ADDRESS).price
+            #     return self._finalize_update(price, start_time)
 
             if self.price_control != "":
                 price = self._get_direct_price(Token.find(self.price_control))

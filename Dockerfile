@@ -20,7 +20,7 @@ FROM base AS prod
 WORKDIR /app
 COPY ./ /app/
 RUN poetry install 
-EXPOSE 8000
+EXPOSE 8443
 ENTRYPOINT ["poetry", "run", "api-start"]
 
 # Sync stage

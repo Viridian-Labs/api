@@ -14,7 +14,7 @@ services:
       dockerfile: Dockerfile
       target: prod
     ports:
-      - "8000:8000"
+      - "8443:8443"
     volumes:
       - ./:/app
     networks:
