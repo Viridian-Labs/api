@@ -13,7 +13,6 @@ from app.settings import (
     DEFAULT_TOKEN_ADDRESS,
     FACTORY_ADDRESS,
     LOGGER,
-    MULTICHAIN_TOKEN_ADDRESSES,
     RETRY_COUNT,
     RETRY_DELAY,
     VOTER_ADDRESS,
@@ -171,17 +170,7 @@ class Pair(Model):
 
             data["isStable"] = data["stable"]
             data["totalSupply"] = data["total_supply"]
-
-            if data["token0_address"] in MULTICHAIN_TOKEN_ADDRESSES:
-                aux_symbol = data["symbol"]
-                data["symbol"] = aux_symbol[:5] + "multi" + aux_symbol[5:]
-            if data["token1_address"] in MULTICHAIN_TOKEN_ADDRESSES:
-                slash_index = data["symbol"].find("/") + 1
-                data["symbol"] = (
-                    data["symbol"][:slash_index]
-                    + "multi"
-                    + data["symbol"][slash_index:]
-                )
+            
             try:
                 cls.query_delete(cls.address == address.lower())
             except Exception as e:

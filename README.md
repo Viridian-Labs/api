@@ -86,7 +86,7 @@ Configuration options are set in the `.env` file. The following options are avai
 - `WEB3_PROVIDER_URI`: The URI of the Web3 provider which is used to interact with the Ethereum blockchain.
 - `LOG_VERBOSE`: Set the logging level. Options include `DEBUG`, `INFO`, `WARNING`, `ERROR`, and `CRITICAL`.
 - `LOG_SAVE`: Set to `1` to save the logs to `app.log` file, or `0` to disable logging to file.
-- `ROUTER_ADDRESS`, `FACTORY_ADDRESS`, `VOTER_ADDRESS`, `GAUGE_ADDRESS`, `VE_ADDRESS`, `REWARDS_DIST_ADDRESS`, `WRAPPED_BRIBE_FACTORY_ADDRESS`, `TREASURY_ADDRESS`, `DEFAULT_TOKEN_ADDRESS`, `NATIVE_TOKEN_ADDRESS`, `STABLE_TOKEN_ADDRESS`, `ROUTE_TOKEN_ADDRESSES`, `BRIBED_DEFAULT_TOKEN_ADDRESS`: These are various contract addresses used in the application. Each address serves a different purpose within the app, and they are essential for the app's functionality.
+- `ROUTER_ADDRESS`, `FACTORY_ADDRESS`, `VOTER_ADDRESS`, `GAUGE_ADDRESS`, `VE_ADDRESS`, `REWARDS_DIST_ADDRESS`, `WRAPPED_BRIBE_FACTORY_ADDRESS`, `TREASURY_ADDRESS`, `DEFAULT_TOKEN_ADDRESS`, `NATIVE_TOKEN_ADDRESS`, `STABLE_TOKEN_ADDRESS`, `ROUTE_TOKEN_ADDRESSES`: These are various contract addresses used in the application. Each address serves a different purpose within the app, and they are essential for the app's functionality.
 - `EXTERNAL_PRICE_ORDER`: A comma-separated list of functions that dictate the order in which external price data sources are queried.
 
 These configurations control how the application fetches price data, which is crucial for accurate financial calculations.

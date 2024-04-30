@@ -14,7 +14,6 @@ from web3.exceptions import ContractLogicError
 
 from app.misc import ModelUteis
 from app.settings import (
-    BRIBED_DEFAULT_TOKEN_ADDRESS,
     CACHE,
     DEFAULT_TOKEN_ADDRESS,
     EXTERNAL_PRICE_ORDER,
@@ -648,10 +647,6 @@ class Token(Model):
                     self.symbol,
                 )
                 return self._finalize_update(0, start_time)
-
-            # if self.address == BRIBED_DEFAULT_TOKEN_ADDRESS:
-            #     price = Token.find(DEFAULT_TOKEN_ADDRESS).price
-            #     return self._finalize_update(price, start_time)
 
             if self.price_control != "":
                 price = self._get_direct_price(Token.find(self.price_control))
