@@ -1099,7 +1099,7 @@ web3 = "^5.27,!=5.29.*,!=5.30.*,!=5.31.*"
 type = "git"
 url = "https://github.com/Viridian-Labs/multicall.py"
 reference = "HEAD"
-resolved_reference = "c3eb27ca983f159a6417f4de205998d4f483fe18"
+resolved_reference = "7dca3c935bc54c0f23df2c5e52df5af917591dfc"
 
 [[package]]
 name = "multidict"

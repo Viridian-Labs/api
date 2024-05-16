@@ -64,7 +64,7 @@ class Token(Model):
     price = FloatField(default=0)
     stable = BooleanField(default=False)
     liquid_staked_address = TextField()
-    w3 = Web3(HTTPProvider('https://rpc.test.btcs.network'))
+    w3 = Web3(HTTPProvider('https://rpc.ankr.com/core'))
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
     created_at = FloatField(default=w3.eth.get_block("latest").timestamp)
     taxed = BooleanField(default=False)
@@ -511,7 +511,7 @@ class Token(Model):
 
     @classmethod
     def from_tokenlists(cls):
-        w3 = Web3(HTTPProvider('https://rpc.test.btcs.network'))
+        w3 = Web3(HTTPProvider('https://rpc.ankr.com/core'))
         w3.middleware_onion.inject(geth_poa_middleware, layer=0)
         our_chain_id = w3.eth.chain_id
         all_tokens = cls._fetch_all_tokens(our_chain_id)
