@@ -70,6 +70,7 @@ class Token(Model):
     taxed = BooleanField(default=False)
     tax = FloatField(default=0)
     stable_route = BooleanField(default=False)
+    external_feed = BooleanField(default=False)
     price_control = TextField()
 
     DEXSCREENER_ENDPOINT = DEXSCREENER_ENDPOINT
@@ -141,7 +142,7 @@ class Token(Model):
             LOGGER.debug("Token: %s", self.symbol)
             LOGGER.debug("Decimales: %s", self.decimals)
             LOGGER.debug("Address: %s", self.address)
-            LOGGER.debug("Stablecoin Address: %s", self.address)
+            LOGGER.debug("Stablecoin Address: %s", stablecoin.address)
 
             amount, is_stable = Call(
                 ROUTER_ADDRESS,
@@ -511,10 +512,16 @@ class Token(Model):
 
     @classmethod
     def from_tokenlists(cls):
-        w3 = Web3(HTTPProvider('https://rpc.ankr.com/core'))
-        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-        our_chain_id = w3.eth.chain_id
-        all_tokens = cls._fetch_all_tokens(our_chain_id)
+        LOGGER.debug("From tokenlist")
+        try:
+            # w3 = Web3(HTTPProvider('https://rpc.ankr.com/core'))
+            # w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+            # our_chain_id = w3.eth.chain_id
+            our_chain_id = 1116
+            all_tokens = cls._fetch_all_tokens(our_chain_id)
+        
+        except Exception as e:
+            LOGGER.error(f"Error fetching tokenlist: {e}")
 
         return all_tokens
 
@@ -603,6 +610,7 @@ class Token(Model):
         token.tax = token_data.get("tax", False)
         token.price_control = token_data.get("price_control", "").lower()
         token.stable_route = token_data.get("stable_route", False)
+        token.external_feed = token_data.get("external_feed", False)
         token.decimals = token_data.get("decimals", 18)
 
         # token._update_price()
@@ -655,6 +663,10 @@ class Token(Model):
                 price = self._get_direct_price(
                     Token.find(STABLE_TOKEN_ADDRESS)
                 )
+                
+            if self.external_feed:
+                LOGGER.debug("External_feed")
+                price = self.get_price_external_source()
 
             # * GENERAL CASE - Automatically calculated from the route
             # * tokens/reserves of liquidity pools
